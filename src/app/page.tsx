@@ -157,19 +157,19 @@ const WhyIrisSection: React.FC<{ onChipClick: (cat: string) => void }> = ({ onCh
       <div className="grid grid-cols-1 lg:grid-cols-[1.12fr_0.88fr] gap-12 lg:gap-16 items-center">
         {/* Left Column - Benefit-Led Features */}
         <div className="text-left flex flex-col items-start">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold bg-[#8A2BE2]/10 text-purple-300 rounded-full border border-[#8A2BE2]/30">
+          <div className="flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold bg-[#8A2BE2]/10 light:bg-purple-100 text-purple-300 light:text-purple-800 rounded-full border border-[#8A2BE2]/30 light:border-purple-300">
             <span className="w-2 h-2 rounded-full bg-[#8A2BE2] animate-pulse" />
             <span className="text-xs uppercase tracking-wide">Why IRIS 365</span>
-            <span className="text-xs font-mono tracking-wider bg-white/10 px-2 py-0.5 rounded-full ml-1 text-white">
+            <span className="text-xs font-mono tracking-wider bg-white/10 light:bg-purple-200/60 px-2 py-0.5 rounded-full ml-1 text-white light:text-purple-900">
               Built for Leadership
             </span>
           </div>
 
-          <h2 className="text-3xl sm:text-[2.2rem] font-bold text-white font-orbitron mt-5 leading-[1.1] uppercase tracking-tight">
+          <h2 className="text-3xl sm:text-[2.2rem] font-bold text-white light:text-slate-900 font-orbitron mt-5 leading-[1.1] uppercase tracking-tight">
             One Connected Campus. <br /> Zero Manual Chaos.
           </h2>
 
-          <p className="text-slate-300 text-xs sm:text-sm font-sans leading-relaxed mt-5 max-w-[520px]">
+          <p className="text-slate-300 light:text-slate-600 text-xs sm:text-sm font-sans leading-relaxed mt-5 max-w-[520px]">
             From morning biometric gate check-in to evening hostel curfew, IRIS 365 unifies administrative, academic, financial, and logistical workflows into a single dashboard.
           </p>
 
@@ -197,12 +197,12 @@ const WhyIrisSection: React.FC<{ onChipClick: (cat: string) => void }> = ({ onCh
                 desc: 'One digital wallet for canteen meals, library fees, and campus dues.'
               }
             ].map((row, idx) => (
-              <div key={idx} className="p-3.5 rounded-xl bg-white/3 border border-white/8 hover:border-[#8A2BE2]/40 transition-colors">
+              <div key={idx} className="p-3.5 rounded-xl bg-white/3 light:bg-slate-100/70 border border-white/8 light:border-slate-200 hover:border-[#8A2BE2]/40 transition-colors">
                 <div className="flex items-center gap-2.5">
                   <div className="w-2 h-2 rounded-full bg-[#8A2BE2] shrink-0" />
-                  <h3 className="font-semibold text-xs text-white">{row.title}</h3>
+                  <h3 className="font-semibold text-xs text-white light:text-slate-900">{row.title}</h3>
                 </div>
-                <p className="text-xs text-slate-300 mt-1 font-light pl-4 leading-relaxed">{row.desc}</p>
+                <p className="text-xs text-slate-300 light:text-slate-600 mt-1 font-light pl-4 leading-relaxed">{row.desc}</p>
               </div>
             ))}
           </div>
@@ -219,7 +219,7 @@ const WhyIrisSection: React.FC<{ onChipClick: (cat: string) => void }> = ({ onCh
               <button
                 key={chip.label}
                 onClick={() => onChipClick(chip.cat)}
-                className="text-xs font-medium text-slate-300 border border-white/10 bg-white/5 rounded-full px-4 py-1.5 hover:bg-[#8A2BE2]/20 hover:border-[#8A2BE2]/40 hover:text-white transition-all text-left"
+                className="text-xs font-medium text-slate-300 light:text-slate-700 border border-white/10 light:border-slate-300 bg-white/5 light:bg-slate-100 rounded-full px-4 py-1.5 hover:bg-[#8A2BE2]/20 hover:border-[#8A2BE2]/40 hover:text-white light:hover:text-purple-900 transition-all text-left"
               >
                 {chip.label}
               </button>
@@ -230,15 +230,15 @@ const WhyIrisSection: React.FC<{ onChipClick: (cat: string) => void }> = ({ onCh
           <div className="mt-8 w-full max-w-[550px]">
             <button
               onClick={() => setShowTechDetails(!showTechDetails)}
-              className="flex items-center gap-2 text-xs text-purple-300 hover:text-white transition-colors font-mono"
+              className="flex items-center gap-2 text-xs text-purple-300 light:text-purple-700 hover:text-white light:hover:text-purple-900 transition-colors font-mono"
             >
-              <Code className="w-4 h-4 text-purple-400" />
+              <Code className="w-4 h-4 text-purple-400 light:text-purple-600" />
               <span>{showTechDetails ? 'Hide Technical Specifications' : 'Technical Specifications (For IT Leads)'}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTechDetails ? 'rotate-180' : ''}`} />
             </button>
 
             {showTechDetails && (
-              <div className="mt-3 p-4 rounded-xl bg-[#080512] border border-[#8A2BE2]/30 text-xs font-mono space-y-2 text-slate-300">
+              <div className="mt-3 p-4 rounded-xl bg-[#080512] light:bg-purple-50 border border-[#8A2BE2]/30 light:border-purple-200 text-xs font-mono space-y-2 text-slate-300 light:text-purple-950">
                 <p>⚡ Database Engine: PostgreSQL 16 with custom atomic RPC transaction routers.</p>
                 <p>🔒 Security Model: Stateless JWT fingerprinting with TLS 1.3 encryption.</p>
                 <p>🤖 AI Infrastructure: RAG pipeline with pgvector cosine similarity matching.</p>
@@ -253,21 +253,21 @@ const WhyIrisSection: React.FC<{ onChipClick: (cat: string) => void }> = ({ onCh
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
-          className="rounded-3xl p-6 sm:p-7 border border-white/10 bg-[#090117]/80 backdrop-blur-md shadow-2xl relative w-full"
+          className="rounded-3xl p-6 sm:p-7 border border-white/10 light:border-slate-200 bg-[#090117]/80 light:bg-white backdrop-blur-md shadow-2xl relative w-full"
         >
-          <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-4">
+          <div className="flex items-center justify-between mb-4 border-b border-white/10 light:border-slate-200 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-sans font-semibold text-sm sm:text-base text-white">Today's Campus Overview</h3>
-                <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-xs font-mono font-medium">
+                <h3 className="font-sans font-semibold text-sm sm:text-base text-white light:text-slate-900">Today's Campus Overview</h3>
+                <span className="px-2 py-0.5 rounded-full bg-purple-500/20 light:bg-purple-100 text-purple-300 light:text-purple-800 text-xs font-mono font-medium">
                   Live Preview
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-light mt-0.5">Sample Telemetry Data</p>
+              <p className="text-xs text-slate-400 light:text-slate-500 font-light mt-0.5">Sample Telemetry Data</p>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-mono text-emerald-400 font-semibold">Active</span>
+              <span className="text-xs font-mono text-emerald-400 dark:text-emerald-400 light:text-emerald-600 font-semibold">Active</span>
             </div>
           </div>
 
@@ -280,16 +280,16 @@ const WhyIrisSection: React.FC<{ onChipClick: (cat: string) => void }> = ({ onCh
             ].map((card) => (
               <div
                 key={card.title}
-                className="rounded-xl p-4 flex items-center justify-between bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
+                className="rounded-xl p-4 flex items-center justify-between bg-white/5 light:bg-slate-100/60 hover:bg-white/10 light:hover:bg-slate-100 transition-colors border border-white/5 light:border-slate-200"
               >
                 <div className="flex items-center gap-3">
                   <div
                     style={{ backgroundColor: card.dotColor }}
                     className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_8px_rgba(138,43,226,0.4)]"
                   />
-                  <span className="font-semibold text-xs sm:text-sm text-white">{card.title}</span>
+                  <span className="font-semibold text-xs sm:text-sm text-white light:text-slate-900">{card.title}</span>
                 </div>
-                <span className="font-light text-xs text-slate-300 text-right">{card.stat}</span>
+                <span className="font-light text-xs text-slate-300 light:text-slate-600 text-right">{card.stat}</span>
               </div>
             ))}
           </div>
@@ -411,20 +411,20 @@ export default function LandingPage() {
         id="hero"
         className="relative z-10 px-6 pt-28 pb-20 md:pt-40 md:pb-32 max-w-6xl mx-auto flex flex-col items-center text-center"
       >
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#8A2BE2]/10 border border-[#8A2BE2]/30 text-purple-300 text-xs font-semibold mb-6">
-          <Zap className="w-4 h-4 text-purple-400" />
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#8A2BE2]/10 light:bg-purple-100 border border-[#8A2BE2]/30 light:border-purple-300 text-purple-300 light:text-purple-800 text-xs font-semibold mb-6">
+          <Zap className="w-4 h-4 text-purple-400 light:text-purple-600" />
           <span>Integrated Campus Operating System</span>
         </div>
 
-        <h1 className="font-heading font-extrabold text-4xl sm:text-6xl md:text-7xl text-white tracking-tight leading-none max-w-4xl">
+        <h1 className="font-heading font-extrabold text-4xl sm:text-6xl md:text-7xl text-white light:text-slate-900 tracking-tight leading-none max-w-4xl">
           The Campus{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8A2BE2] via-[#A78BFA] to-purple-400">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8A2BE2] via-[#A78BFA] to-purple-400 light:from-purple-700 light:via-purple-600 light:to-indigo-600">
             Operating System
           </span>{' '}
           of the Future
         </h1>
 
-        <p className="text-xs sm:text-base text-slate-300 mt-6 max-w-2xl font-light leading-relaxed">
+        <p className="text-xs sm:text-base text-slate-300 light:text-slate-600 mt-6 max-w-2xl font-light leading-relaxed">
           IRIS 365 unifies administrative operations, cashless student wallets, live transit GPS, and AI concierge support into one multi-tenant cloud workspace.
         </p>
 
@@ -438,13 +438,13 @@ export default function LandingPage() {
           </Link>
           <Link
             href="/home"
-            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-semibold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white/5 light:bg-white border border-white/10 light:border-slate-300 hover:bg-white/10 light:hover:bg-slate-100 text-white light:text-slate-900 font-semibold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm"
           >
-            <GraduationCap className="w-4 h-4 text-purple-400" /> Find Institution
+            <GraduationCap className="w-4 h-4 text-purple-400 light:text-purple-600" /> Find Institution
           </Link>
           <a
             href="#simulator"
-            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white/3 border border-white/5 hover:bg-white/10 text-slate-300 font-medium text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white/3 light:bg-slate-100 border border-white/5 light:border-slate-200 hover:bg-white/10 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 font-medium text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
           >
             <span>See Live Telemetry</span>
             <ChevronDown className="w-4 h-4" />
@@ -455,22 +455,22 @@ export default function LandingPage() {
       {/* Admissions Notice Banner */}
       <section className="relative z-10 px-6 py-6 max-w-6xl mx-auto w-full">
         <Link href="/home" className="block group">
-          <div className="relative overflow-hidden rounded-2xl border border-[#8A2BE2]/30 bg-gradient-to-r from-[#8A2BE2]/10 via-purple-500/10 to-[#6C2BD9]/10 px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4 hover:border-[#8A2BE2]/60 transition-all duration-300">
+          <div className="relative overflow-hidden rounded-2xl border border-[#8A2BE2]/30 light:border-purple-200 bg-gradient-to-r from-[#8A2BE2]/10 via-purple-500/10 to-[#6C2BD9]/10 light:from-purple-100/80 light:via-indigo-50/80 light:to-purple-100/80 px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4 hover:border-[#8A2BE2]/60 light:hover:border-purple-400 transition-all duration-300 shadow-md light:shadow-sm">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#6C2BD9] to-[#8A2BE2] flex items-center justify-center shadow-lg shadow-[#8A2BE2]/20 shrink-0">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 light:text-emerald-700 text-xs font-bold uppercase tracking-wider">
                     Admissions Open
                   </span>
-                  <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">2026–27 Academic Cycle</span>
+                  <span className="text-xs font-mono text-slate-400 light:text-slate-500 uppercase tracking-wider">2026–27 Academic Cycle</span>
                 </div>
-                <h3 className="font-heading font-bold text-white text-base md:text-lg group-hover:text-purple-300 transition-colors">
+                <h3 className="font-heading font-bold text-white light:text-slate-900 text-base md:text-lg group-hover:text-purple-300 light:group-hover:text-purple-700 transition-colors">
                   Explore Partner Colleges & Apply Online
                 </h3>
-                <p className="text-xs text-slate-300 mt-0.5">
+                <p className="text-xs text-slate-300 light:text-slate-600 mt-0.5">
                   Search partner institutions, review program details, and submit application files in one place.
                 </p>
               </div>
@@ -487,13 +487,13 @@ export default function LandingPage() {
       <WhyIrisSection onChipClick={handleChipClick} />
 
       {/* Core Modules Showcase */}
-      <section id="modules" className="relative z-10 px-6 py-20 bg-transparent border-y border-white/5">
+      <section id="modules" className="relative z-10 px-6 py-20 bg-transparent border-y border-white/5 light:border-slate-200">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16 space-y-3">
-            <h2 className="font-heading font-extrabold text-3xl md:text-4xl text-white">
+            <h2 className="font-heading font-extrabold text-3xl md:text-4xl text-white light:text-slate-900">
               Complete Campus Operational Suite
             </h2>
-            <p className="text-slate-300 text-xs sm:text-sm max-w-lg mx-auto leading-relaxed">
+            <p className="text-slate-300 light:text-slate-600 text-xs sm:text-sm max-w-lg mx-auto leading-relaxed">
               Every campus function managed seamlessly with role-based access control and multi-tenant security isolation.
             </p>
           </div>
@@ -504,7 +504,7 @@ export default function LandingPage() {
               return (
                 <div
                   key={index}
-                  className="rounded-2xl p-6 bg-white/5 border border-white/10 hover:border-[#8A2BE2]/50 transition-all duration-300 group hover:-translate-y-1"
+                  className="rounded-2xl p-6 bg-white/5 light:bg-white border border-white/10 light:border-slate-200 hover:border-[#8A2BE2]/50 light:hover:border-purple-400 transition-all duration-300 group hover:-translate-y-1 light:shadow-sm"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div
@@ -512,14 +512,14 @@ export default function LandingPage() {
                     >
                       <IconComponent className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-xs font-mono uppercase bg-white/5 border border-white/10 text-purple-300 px-2.5 py-1 rounded-md">
+                    <span className="text-xs font-mono uppercase bg-white/5 light:bg-purple-100 border border-white/10 light:border-purple-200 text-purple-300 light:text-purple-700 px-2.5 py-1 rounded-md">
                       {mod.badge}
                     </span>
                   </div>
-                  <h3 className="font-heading font-bold text-base text-white group-hover:text-purple-300 transition-colors">
+                  <h3 className="font-heading font-bold text-base text-white light:text-slate-900 group-hover:text-purple-300 light:group-hover:text-purple-700 transition-colors">
                     {mod.title}
                   </h3>
-                  <p className="text-slate-300 text-xs mt-2 leading-relaxed font-light">{mod.desc}</p>
+                  <p className="text-slate-300 light:text-slate-600 text-xs mt-2 leading-relaxed font-light">{mod.desc}</p>
                 </div>
               );
             })}
@@ -532,37 +532,37 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Trust Signals */}
           <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8A2BE2]/10 border border-[#8A2BE2]/30 text-purple-300 text-xs font-mono uppercase font-semibold">
-              <Shield className="w-4 h-4 text-purple-400" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8A2BE2]/10 light:bg-purple-100 border border-[#8A2BE2]/30 light:border-purple-300 text-purple-300 light:text-purple-800 text-xs font-mono uppercase font-semibold">
+              <Shield className="w-4 h-4 text-purple-400 light:text-purple-600" />
               <span>Enterprise Security & Compliance</span>
             </div>
-            <h2 className="font-heading font-extrabold text-3xl md:text-4xl text-white">
+            <h2 className="font-heading font-extrabold text-3xl md:text-4xl text-white light:text-slate-900">
               Bank-Grade Security for Your Campus Data
             </h2>
-            <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-light">
+            <p className="text-slate-300 light:text-slate-600 text-xs sm:text-sm leading-relaxed font-light">
               Built from the ground up for privacy, ISO 27001 compliance, and zero data leakage between campus roles.
             </p>
 
             <div className="space-y-4 pt-2">
               <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                <CheckCircle className="w-5 h-5 text-purple-400 light:text-purple-600 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">End-to-End Encryption</h4>
-                  <p className="text-xs text-slate-300 mt-0.5 font-light">AES-256 data encryption at rest and TLS 1.3 in transit protect all records.</p>
+                  <h4 className="text-xs font-bold text-white light:text-slate-900 uppercase tracking-wider font-mono">End-to-End Encryption</h4>
+                  <p className="text-xs text-slate-300 light:text-slate-600 mt-0.5 font-light">AES-256 data encryption at rest and TLS 1.3 in transit protect all records.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                <Lock className="w-5 h-5 text-purple-400 light:text-purple-600 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Role-Based Access Control (RBAC)</h4>
-                  <p className="text-xs text-slate-300 mt-0.5 font-light">Students, faculty, and administrative staff only view authorized data scopes.</p>
+                  <h4 className="text-xs font-bold text-white light:text-slate-900 uppercase tracking-wider font-mono">Role-Based Access Control (RBAC)</h4>
+                  <p className="text-xs text-slate-300 light:text-slate-600 mt-0.5 font-light">Students, faculty, and administrative staff only view authorized data scopes.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <FileCheck className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                <FileCheck className="w-5 h-5 text-purple-400 light:text-purple-600 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Automated NAAC & NBA Reports</h4>
-                  <p className="text-xs text-slate-300 mt-0.5 font-light">Instant compliance compilation for statutory audits and institutional accreditation.</p>
+                  <h4 className="text-xs font-bold text-white light:text-slate-900 uppercase tracking-wider font-mono">Automated NAAC & NBA Reports</h4>
+                  <p className="text-xs text-slate-300 light:text-slate-600 mt-0.5 font-light">Instant compliance compilation for statutory audits and institutional accreditation.</p>
                 </div>
               </div>
             </div>
@@ -571,15 +571,15 @@ export default function LandingPage() {
             <div className="pt-4">
               <button
                 onClick={() => setShowTechTerminalDetails(!showTechTerminalDetails)}
-                className="flex items-center gap-2 text-xs font-mono text-purple-300 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-xs font-mono text-purple-300 light:text-purple-700 hover:text-white light:hover:text-purple-900 transition-colors"
               >
-                <Terminal className="w-4 h-4 text-purple-400" />
+                <Terminal className="w-4 h-4 text-purple-400 light:text-purple-600" />
                 <span>{showTechTerminalDetails ? 'Hide Infrastructure Logs' : 'View Backend Routing & Database Architecture'}</span>
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTechTerminalDetails ? 'rotate-180' : ''}`} />
               </button>
 
               {showTechTerminalDetails && (
-                <div className="mt-3 p-4 rounded-xl bg-[#080512] border border-white/10 text-xs font-mono text-slate-300 space-y-1.5">
+                <div className="mt-3 p-4 rounded-xl bg-[#080512] light:bg-purple-50 border border-white/10 light:border-purple-200 text-xs font-mono text-slate-300 light:text-purple-950 space-y-1.5">
                   <p>• Atomic PL/pgSQL database locking functions prevent double bookings.</p>
                   <p>• Express REST endpoints enforce strict JWT fingerprint verification.</p>
                   <p>• Multi-tenant RLS policies isolate database records per tenant UUID.</p>
@@ -589,8 +589,8 @@ export default function LandingPage() {
           </div>
 
           {/* Live Terminal Output */}
-          <div className="w-full bg-[#080512] border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden font-mono">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+          <div className="w-full bg-[#080512] light:bg-slate-900 border border-white/10 light:border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden font-mono">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 light:border-slate-800 mb-4">
               <div className="flex gap-1.5">
                 <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
                 <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
@@ -634,16 +634,16 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="relative z-10 px-6 py-20 bg-transparent border-t border-white/5 w-full">
+      <section id="faq" className="relative z-10 px-6 py-20 bg-transparent border-t border-white/5 light:border-slate-200 w-full">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12 space-y-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8A2BE2]/10 border border-[#8A2BE2]/30 text-purple-300 text-xs font-orbitron font-bold uppercase tracking-wider mb-2">
-              <MessageSquare className="w-4 h-4 text-purple-400" />
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8A2BE2]/10 light:bg-purple-100 border border-[#8A2BE2]/30 light:border-purple-300 text-purple-300 light:text-purple-800 text-xs font-orbitron font-bold uppercase tracking-wider mb-2">
+              <MessageSquare className="w-4 h-4 text-purple-400 light:text-purple-600" />
               <span>Institutional FAQ</span>
             </div>
-            <h2 className="font-heading font-extrabold text-3xl md:text-4xl text-white">Frequently Asked Questions</h2>
-            <p className="text-slate-300 text-xs sm:text-sm font-sans">
+            <h2 className="font-heading font-extrabold text-3xl md:text-4xl text-white light:text-slate-900">Frequently Asked Questions</h2>
+            <p className="text-slate-300 light:text-slate-600 text-xs sm:text-sm font-sans">
               Find answers to platform deployment, security specifications, and licensing models.
             </p>
           </div>
@@ -656,9 +656,9 @@ export default function LandingPage() {
                 placeholder="Search questions or keywords..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-5 py-3.5 pl-12 rounded-2xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-400 outline-none focus:border-[#8A2BE2] focus:ring-4 focus:ring-[#8A2BE2]/10 transition-all duration-300"
+                className="w-full px-5 py-3.5 pl-12 rounded-2xl bg-white/5 light:bg-white border border-white/10 light:border-slate-300 text-xs text-white light:text-slate-900 placeholder-slate-400 light:placeholder-slate-500 outline-none focus:border-[#8A2BE2] focus:ring-4 focus:ring-[#8A2BE2]/10 transition-all duration-300 shadow-sm"
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 pointer-events-none" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 light:text-slate-500 pointer-events-none" />
             </div>
 
             {/* Category Pills */}
@@ -670,7 +670,7 @@ export default function LandingPage() {
                   className={`px-4 py-2 rounded-full text-xs font-orbitron font-bold uppercase tracking-wider transition-all duration-300 ${
                     selectedCategory === cat
                       ? 'bg-gradient-to-r from-[#6C2BD9] to-[#8A2BE2] text-white border-transparent shadow-md shadow-[#8A2BE2]/20'
-                      : 'bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white'
+                      : 'bg-white/5 light:bg-white border border-white/10 light:border-slate-200 text-slate-300 light:text-slate-700 hover:bg-white/10 light:hover:bg-slate-100 hover:text-white light:hover:text-slate-900'
                   }`}
                 >
                   {cat}
@@ -691,23 +691,23 @@ export default function LandingPage() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="rounded-2xl border border-white/10 bg-[#090117]/80 hover:border-[#8A2BE2]/40 overflow-hidden transition-all duration-300"
+                      className="rounded-2xl border border-white/10 light:border-slate-200 bg-[#090117]/80 light:bg-white hover:border-[#8A2BE2]/40 light:hover:border-purple-400 overflow-hidden transition-all duration-300 light:shadow-sm"
                     >
                       <button
                         onClick={() => setExpandedFaqId(isExpanded ? null : faq.id)}
                         className="w-full px-6 py-5 flex items-center justify-between text-left gap-4"
                       >
                         <div className="flex flex-col gap-1.5 text-left">
-                          <span className="text-xs font-mono uppercase bg-white/5 border border-white/10 text-purple-300 px-2.5 py-0.5 rounded self-start tracking-wider">
+                          <span className="text-xs font-mono uppercase bg-white/5 light:bg-purple-100 border border-white/10 light:border-purple-200 text-purple-300 light:text-purple-800 px-2.5 py-0.5 rounded self-start tracking-wider">
                             {faq.category}
                           </span>
-                          <span className="font-heading font-bold text-white text-xs sm:text-sm tracking-wide mt-1">
+                          <span className="font-heading font-bold text-white light:text-slate-900 text-xs sm:text-sm tracking-wide mt-1">
                             {faq.question}
                           </span>
                         </div>
                         <div
-                          className={`w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-slate-300 transition-transform duration-300 shrink-0 ${
-                            isExpanded ? 'rotate-180 text-white' : ''
+                          className={`w-7 h-7 rounded-full bg-white/5 light:bg-slate-100 flex items-center justify-center text-slate-300 light:text-slate-600 transition-transform duration-300 shrink-0 ${
+                            isExpanded ? 'rotate-180 text-white light:text-slate-900' : ''
                           }`}
                         >
                           <ChevronDown className="w-4 h-4" />
@@ -722,7 +722,7 @@ export default function LandingPage() {
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
                           >
-                            <div className="px-6 pb-6 text-xs text-slate-300 leading-relaxed font-sans border-t border-white/5 pt-4">
+                            <div className="px-6 pb-6 text-xs text-slate-300 light:text-slate-600 leading-relaxed font-sans border-t border-white/5 light:border-slate-200 pt-4">
                               {faq.answer}
                             </div>
                           </MotionDiv>
@@ -732,14 +732,14 @@ export default function LandingPage() {
                   );
                 })
               ) : (
-                <div className="text-center py-12 px-6 rounded-2xl border border-white/10 bg-white/5 space-y-3">
-                  <p className="text-xs text-slate-300 font-medium">No matching questions found for your query.</p>
+                <div className="text-center py-12 px-6 rounded-2xl border border-white/10 light:border-slate-200 bg-white/5 light:bg-white space-y-3">
+                  <p className="text-xs text-slate-300 light:text-slate-600 font-medium">No matching questions found for your query.</p>
                   <button
                     onClick={() => {
                       setSearchQuery('');
                       setSelectedCategory('All');
                     }}
-                    className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-bold text-white uppercase tracking-wider transition-all"
+                    className="px-4 py-2 rounded-xl bg-white/10 light:bg-slate-100 hover:bg-white/15 light:hover:bg-slate-200 border border-white/10 light:border-slate-300 text-xs font-bold text-white light:text-slate-900 uppercase tracking-wider transition-all"
                   >
                     Clear Filters & Search
                   </button>
