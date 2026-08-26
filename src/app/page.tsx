@@ -79,15 +79,6 @@ const MODULES = [
   }
 ];
 
-const MOCK_LOGS = [
-  { type: 'ATTENDANCE', text: 'Main Gate Terminal 04 verified student ID #23CSE051: Attendance Marked', time: 'Just now' },
-  { type: 'PAYMENT', text: 'Canteen Digital Wallet check-out Order #4092: ₹85.00 completed', time: '1m ago' },
-  { type: 'SECURITY', text: 'Hostel Warden approved digital outpass request for student ID #23ECE012', time: '3m ago' },
-  { type: 'HOSTEL', text: 'Facility maintenance complaint auto-dispatched for Hostel Block A-101', time: '5m ago' },
-  { type: 'TRANSIT', text: 'Campus Bus RJ19-PA-1024 broadcasted live GPS coordinate: Route 3 On Time', time: '8m ago' },
-  { type: 'AI', text: 'AI Campus Concierge answered student examination query in 320ms', time: '10m ago' }
-];
-
 const FAQ_DATA = [
   {
     id: 'q1',
@@ -300,10 +291,8 @@ const WhyIrisSection: React.FC<{ onChipClick: (cat: string) => void }> = ({ onCh
 };
 
 export default function LandingPage() {
-  const [liveLogs, setLiveLogs] = useState(MOCK_LOGS);
   const [videoReady, setVideoReady] = useState(false);
   const [showStickyCta, setShowStickyCta] = useState(false);
-  const [showTechTerminalDetails, setShowTechTerminalDetails] = useState(false);
 
   // FAQ States
   const [searchQuery, setSearchQuery] = useState('');
@@ -317,49 +306,6 @@ export default function LandingPage() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Simulate real-time telemetry logs
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const logTypes = ['ATTENDANCE', 'PAYMENT', 'SECURITY', 'HOSTEL', 'TRANSIT', 'AI'];
-      const rollNums = ['23CSE051', '23CSE052', '23ECE012', '23ME005'];
-      const type = logTypes[Math.floor(Math.random() * logTypes.length)];
-      let text = '';
-
-      switch (type) {
-        case 'ATTENDANCE':
-          text = `Main Gate Terminal 04 verified student ID #${rollNums[Math.floor(Math.random() * rollNums.length)]}: Present`;
-          break;
-        case 'PAYMENT':
-          text = `Canteen Wallet check-out Order #${Math.floor(Math.random() * 9000 + 1000)}: ₹${Math.floor(Math.random() * 200 + 40)} processed`;
-          break;
-        case 'SECURITY':
-          text = `Hostel Warden approved digital outpass for student ID #${rollNums[Math.floor(Math.random() * rollNums.length)]}`;
-          break;
-        case 'HOSTEL':
-          text = `Facility maintenance request completed for Hostel Block A-101`;
-          break;
-        case 'TRANSIT':
-          text = `Campus Bus RJ19-PA-1024 broadcasted GPS update: Speed 42 km/h`;
-          break;
-        case 'AI':
-          text = `AI Campus Concierge answered student query in 320ms`;
-          break;
-      }
-
-      setLiveLogs((prev) => [
-        { type, text, time: 'Just now' },
-        ...prev
-          .map((p) => ({
-            ...p,
-            time: p.time === 'Just now' ? '1m ago' : p.time.includes('m') ? `${parseInt(p.time) + 1}m ago` : p.time
-          }))
-          .slice(0, 5)
-      ]);
-    }, 4000);
-
-    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -442,13 +388,6 @@ export default function LandingPage() {
           >
             <GraduationCap className="w-4 h-4 text-purple-400 light:text-purple-600" /> Find Institution
           </Link>
-          <a
-            href="#simulator"
-            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-white/3 light:bg-slate-100 border border-white/5 light:border-slate-200 hover:bg-white/10 light:hover:bg-slate-200 text-slate-300 light:text-slate-700 font-medium text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
-          >
-            <span>See Live Telemetry</span>
-            <ChevronDown className="w-4 h-4" />
-          </a>
         </div>
       </section>
 
@@ -523,112 +462,6 @@ export default function LandingPage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* Security & Live Simulator Section */}
-      <section id="simulator" className="relative z-10 px-6 py-20 max-w-6xl mx-auto w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          {/* Trust Signals */}
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#8A2BE2]/10 light:bg-purple-100 border border-[#8A2BE2]/30 light:border-purple-300 text-purple-300 light:text-purple-800 text-xs font-mono uppercase font-semibold">
-              <Shield className="w-4 h-4 text-purple-400 light:text-purple-600" />
-              <span>Enterprise Security & Compliance</span>
-            </div>
-            <h2 className="font-heading font-extrabold text-3xl md:text-4xl text-white light:text-slate-900">
-              Bank-Grade Security for Your Campus Data
-            </h2>
-            <p className="text-slate-300 light:text-slate-600 text-xs sm:text-sm leading-relaxed font-light">
-              Built from the ground up for privacy, ISO 27001 compliance, and zero data leakage between campus roles.
-            </p>
-
-            <div className="space-y-4 pt-2">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-purple-400 light:text-purple-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-white light:text-slate-900 uppercase tracking-wider font-mono">End-to-End Encryption</h4>
-                  <p className="text-xs text-slate-300 light:text-slate-600 mt-0.5 font-light">AES-256 data encryption at rest and TLS 1.3 in transit protect all records.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-purple-400 light:text-purple-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-white light:text-slate-900 uppercase tracking-wider font-mono">Role-Based Access Control (RBAC)</h4>
-                  <p className="text-xs text-slate-300 light:text-slate-600 mt-0.5 font-light">Students, faculty, and administrative staff only view authorized data scopes.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <FileCheck className="w-5 h-5 text-purple-400 light:text-purple-600 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-white light:text-slate-900 uppercase tracking-wider font-mono">Automated NAAC & NBA Reports</h4>
-                  <p className="text-xs text-slate-300 light:text-slate-600 mt-0.5 font-light">Instant compliance compilation for statutory audits and institutional accreditation.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Under the Hood Technical Drawer */}
-            <div className="pt-4">
-              <button
-                onClick={() => setShowTechTerminalDetails(!showTechTerminalDetails)}
-                className="flex items-center gap-2 text-xs font-mono text-purple-300 light:text-purple-700 hover:text-white light:hover:text-purple-900 transition-colors"
-              >
-                <Terminal className="w-4 h-4 text-purple-400 light:text-purple-600" />
-                <span>{showTechTerminalDetails ? 'Hide Infrastructure Logs' : 'View Backend Routing & Database Architecture'}</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showTechTerminalDetails ? 'rotate-180' : ''}`} />
-              </button>
-
-              {showTechTerminalDetails && (
-                <div className="mt-3 p-4 rounded-xl bg-[#080512] light:bg-purple-50 border border-white/10 light:border-purple-200 text-xs font-mono text-slate-300 light:text-purple-950 space-y-1.5">
-                  <p>• Atomic PL/pgSQL database locking functions prevent double bookings.</p>
-                  <p>• Express REST endpoints enforce strict JWT fingerprint verification.</p>
-                  <p>• Multi-tenant RLS policies isolate database records per tenant UUID.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Live Terminal Output */}
-          <div className="w-full bg-[#080512] light:bg-slate-900 border border-white/10 light:border-slate-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden font-mono">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 light:border-slate-800 mb-4">
-              <div className="flex gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
-                <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
-                <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
-              </div>
-              <span className="text-xs text-slate-400">iris-telemetry-monitor.log</span>
-            </div>
-
-            <div className="space-y-3.5 max-h-[320px] overflow-y-auto">
-              {liveLogs.map((log, index) => (
-                <div
-                  key={index}
-                  className="text-xs flex flex-col gap-1 border-l-2 pl-3 border-[#8A2BE2]/40 hover:border-purple-400 transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded font-bold ${
-                        log.type === 'ATTENDANCE'
-                          ? 'bg-purple-500/20 text-purple-300'
-                          : log.type === 'PAYMENT'
-                            ? 'bg-emerald-500/20 text-emerald-300'
-                            : log.type === 'SECURITY'
-                              ? 'bg-rose-500/20 text-rose-300'
-                              : log.type === 'HOSTEL'
-                                ? 'bg-indigo-500/20 text-indigo-300'
-                                : log.type === 'TRANSIT'
-                                  ? 'bg-sky-500/20 text-sky-300'
-                                  : 'bg-fuchsia-500/20 text-fuchsia-300'
-                      }`}
-                    >
-                      {log.type}
-                    </span>
-                    <span className="text-xs text-slate-400">{log.time}</span>
-                  </div>
-                  <p className="text-slate-200 text-xs mt-0.5 font-light">{log.text}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
