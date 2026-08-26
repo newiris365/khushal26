@@ -284,7 +284,7 @@ export let mockAttendanceDevices: any[] = [];
 export let mockInstitutions: any[] = [
   {
     id: 'a0000000-0000-0000-0000-000000000001',
-    name: 'SIN Institute of Engineering & Technology (SIET)',
+    name: 'JIET (Jodhpur Institute of Engineering & Technology)',
     type: 'university',
     plan_tier: 'University',
     plan_price_monthly: 25000,
@@ -353,7 +353,7 @@ function getMockDataForTable(tableName: string) {
           phone: '+919876543211',
           is_active: true,
           institutions: {
-            name: 'SIN Institute of Engineering & Technology (SIET)',
+            name: 'JIET (Jodhpur Institute of Engineering & Technology)',
             plan_tier: 'University'
           }
         },
@@ -366,7 +366,7 @@ function getMockDataForTable(tableName: string) {
           phone: '+919999988888',
           is_active: true,
           institutions: {
-            name: 'SIN Institute of Engineering & Technology (SIET)',
+            name: 'JIET (Jodhpur Institute of Engineering & Technology)',
             plan_tier: 'University'
           }
         },
@@ -379,7 +379,7 @@ function getMockDataForTable(tableName: string) {
           phone: '+919876543299',
           is_active: true,
           institutions: {
-            name: 'SIN Institute of Engineering & Technology (SIET)',
+            name: 'JIET (Jodhpur Institute of Engineering & Technology)',
             plan_tier: 'University'
           }
         }

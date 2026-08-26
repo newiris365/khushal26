@@ -120,10 +120,10 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:contact@iris365.io"
+                  href="mailto:newiris365@gmail.com"
                   className="hover:text-purple-700 dark:hover:text-purple-300 transition-colors flex items-center gap-1"
                 >
-                  <Mail className="w-3.5 h-3.5" /> contact@iris365.io
+                  <Mail className="w-3.5 h-3.5" /> newiris365@gmail.com
                 </a>
               </li>
             </ul>

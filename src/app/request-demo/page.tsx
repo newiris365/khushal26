@@ -393,7 +393,7 @@ function RequestDemoFormContent() {
                         name="contactNumber"
                         value={formValues.contactNumber}
                         onChange={handleChange}
-                        placeholder="+91 73572 88703"
+                        placeholder="+91 86190 19653"
                         className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none transition-all duration-300 ${
                           errors.contactNumber
                             ? 'border-[#EF4444] focus:ring-4 focus:ring-[#EF4444]/15'
@@ -420,7 +420,7 @@ function RequestDemoFormContent() {
                         name="email"
                         value={formValues.email}
                         onChange={handleChange}
-                        placeholder="contact@sintechnologies.in"
+                        placeholder="newiris365@gmail.com"
                         className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none transition-all duration-300 ${
                           errors.email
                             ? 'border-[#EF4444] focus:ring-4 focus:ring-[#EF4444]/15'
@@ -450,7 +450,7 @@ function RequestDemoFormContent() {
                         name="institutionName"
                         value={formValues.institutionName}
                         onChange={handleChange}
-                        placeholder="e.g. SIET Jodhpur"
+                        placeholder="e.g. JIET Jodhpur"
                         className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none transition-all duration-300 ${
                           errors.institutionName
                             ? 'border-[#EF4444] focus:ring-4 focus:ring-[#EF4444]/15'

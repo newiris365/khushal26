@@ -65,7 +65,7 @@ function decodeJWT(token: string): Record<string, any> | null {
       email: 'siddharth@sin.education',
       role: 'SuperAdmin',
       institution_id: 'a0000000-0000-0000-0000-000000000001',
-      institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+      institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
       plan_tier: 'Enterprise'
     };
   }

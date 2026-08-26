@@ -284,7 +284,7 @@ export async function GET(request: NextRequest) {
     let resolvedRole = 'Student';
     let resolvedInstitutionId = 'a0000000-0000-0000-0000-000000000001';
     let resolvedName = authUser.user_metadata?.full_name || authUser.user_metadata?.name || 'Google User';
-    let resolvedInstitutionName = 'SIN Institute of Engineering & Technology (SIET)';
+    let resolvedInstitutionName = 'JIET (Jodhpur Institute of Engineering & Technology)';
     let resolvedPlanTier = 'University';
     let resolvedInstituteType = 'college';
     let isActive = true;

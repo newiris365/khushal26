@@ -50,7 +50,7 @@ const SCHOOL_INST_ID = 'a0000000-0000-0000-0000-000000000002';
 const getMockProfile = (email: string, role: string) => {
   const isSchool = email.includes('school');
   const instId = isSchool ? SCHOOL_INST_ID : COLLEGE_INST_ID;
-  const instName = isSchool ? 'SIET School' : 'SIN Institute of Engineering & Technology (SIET)';
+  const instName = isSchool ? 'JIET School' : 'JIET (Jodhpur Institute of Engineering & Technology)';
   const instType = isSchool ? 'school' : 'college';
 
   switch (role) {
@@ -70,7 +70,7 @@ const getMockProfile = (email: string, role: string) => {
     case 'Admin':
       return {
         id: isSchool ? 'b0000000-0000-0000-0000-000000000031' : 'b0000000-0000-0000-0000-000000000002',
-        name: isSchool ? 'School Admin' : 'Director SIET',
+        name: isSchool ? 'School Admin' : 'Director JIET',
         email: email,
         role: 'Admin',
         institution_id: instId,
@@ -162,7 +162,7 @@ const getMockProfile = (email: string, role: string) => {
         email: email,
         role: 'HOD',
         institution_id: COLLEGE_INST_ID,
-        institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+        institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
         plan_tier: 'University',
         institute_type: 'college'
       };
@@ -180,11 +180,11 @@ const getMockProfile = (email: string, role: string) => {
     case 'Director':
       return {
         id: 'b0000000-0000-0000-0000-000000000019',
-        name: 'Director SIET',
+        name: 'Director JIET',
         email: email,
         role: 'Director',
         institution_id: COLLEGE_INST_ID,
-        institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+        institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
         plan_tier: 'University',
         institute_type: 'college'
       };
@@ -195,7 +195,7 @@ const getMockProfile = (email: string, role: string) => {
         email: email,
         role: 'SuperAdmin',
         institution_id: COLLEGE_INST_ID,
-        institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+        institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
         plan_tier: 'Enterprise',
         institute_type: 'college'
       };
@@ -214,7 +214,7 @@ const getMockProfile = (email: string, role: string) => {
     case 'VP':
       return {
         id: 'b0000000-0000-0000-0000-000000000022',
-        name: isSchool ? 'Vice Principal' : 'Vice Principal SIET',
+        name: isSchool ? 'Vice Principal' : 'Vice Principal JIET',
         email: email,
         role: 'Vice Principal',
         institution_id: instId,
@@ -229,7 +229,7 @@ const getMockProfile = (email: string, role: string) => {
         email: email,
         role: 'TPO',
         institution_id: COLLEGE_INST_ID,
-        institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+        institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
         plan_tier: 'University',
         institute_type: 'college'
       };
@@ -240,7 +240,7 @@ const getMockProfile = (email: string, role: string) => {
         email: email,
         role: 'IQAC Coordinator',
         institution_id: COLLEGE_INST_ID,
-        institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+        institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
         plan_tier: 'University',
         institute_type: 'college'
       };
@@ -262,7 +262,7 @@ const getMockProfile = (email: string, role: string) => {
         email: email,
         role: 'Gym Trainer',
         institution_id: COLLEGE_INST_ID,
-        institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+        institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
         plan_tier: 'University',
         institute_type: 'college'
       };
@@ -273,7 +273,7 @@ const getMockProfile = (email: string, role: string) => {
         email: email,
         role: 'HR Admin',
         institution_id: COLLEGE_INST_ID,
-        institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+        institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
         plan_tier: 'University',
         institute_type: 'college'
       };
@@ -284,7 +284,7 @@ const getMockProfile = (email: string, role: string) => {
         email: email,
         role: 'Company HR',
         institution_id: COLLEGE_INST_ID,
-        institution_name: 'SIN Institute of Engineering & Technology (SIET)',
+        institution_name: 'JIET (Jodhpur Institute of Engineering & Technology)',
         plan_tier: 'University',
         institute_type: 'college'
       };

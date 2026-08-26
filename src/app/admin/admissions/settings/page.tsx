@@ -13,27 +13,27 @@ export default function AdminSettingsPage() {
   // Offer Letter Settings
   const [sigAuthority, setSigAuthority] = useState('Registrar (Admissions)');
   const [depositAmount, setDepositAmount] = useState(10000);
-  const [letterHeader, setLetterHeader] = useState('SIN Institute of Engineering & Technology, Jodhpur');
+  const [letterHeader, setLetterHeader] = useState('JIET, Jodhpur');
 
   // WhatsApp Campaign Templates
   const [selectedTemplate, setSelectedTemplate] = useState('follow_up');
   const [templateBody, setTemplateBody] = useState(
-    "Dear {{name}},\n\nThank you for inquiring about B.Tech CSE at SIN Institute (SIET). The admissions window is actively closing soon. Apply here: {{link}}\n\nRegards,\nRegistrar Office"
+    "Dear {{name}},\n\nThank you for inquiring about B.Tech CSE at JIET. The admissions window is actively closing soon. Apply here: {{link}}\n\nRegards,\nRegistrar Office"
   );
 
   const handleTemplateChange = (key: string) => {
     setSelectedTemplate(key);
     if (key === 'follow_up') {
       setTemplateBody(
-        "Dear {{name}},\n\nThank you for inquiring about B.Tech CSE at SIN Institute (SIET). The admissions window is actively closing soon. Apply here: {{link}}\n\nRegards,\nRegistrar Office"
+        "Dear {{name}},\n\nThank you for inquiring about B.Tech CSE at JIET. The admissions window is actively closing soon. Apply here: {{link}}\n\nRegards,\nRegistrar Office"
       );
     } else if (key === 'cutoff_alert') {
       setTemplateBody(
-        "Dear {{name}},\n\nCongratulations! The Round {{round}} cutoffs have been published. You are listed under rank #{{rank}}. Please log in to accept the provisional offer: {{link}}\n\nRegards,\nSIET Admissions Desk"
+        "Dear {{name}},\n\nCongratulations! The Round {{round}} cutoffs have been published. You are listed under rank #{{rank}}. Please log in to accept the provisional offer: {{link}}\n\nRegards,\nJIET Admissions Desk"
       );
     } else if (key === 'fees_reminder') {
       setTemplateBody(
-        "Dear {{name}},\n\nThis is a priority reminder that your seat confirmation deposit is pending for {{program}}. Revocation deadline: {{expiry_date}}. Secure your seat here: {{link}}\n\nRegards,\nSIET Accounts Office"
+        "Dear {{name}},\n\nThis is a priority reminder that your seat confirmation deposit is pending for {{program}}. Revocation deadline: {{expiry_date}}. Secure your seat here: {{link}}\n\nRegards,\nJIET Accounts Office"
       );
     }
   };

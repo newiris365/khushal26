@@ -512,16 +512,8 @@ export default function AboutPage() {
         {/* Credential Pills */}
         <div className="flex flex-wrap items-center justify-center gap-3 mt-8 max-w-2xl">
           <div className="flex items-center gap-1.5 px-3.5 py-1 text-[9px] font-mono rounded-full bg-white/5 border border-white/8 text-white">
-            <Award className="w-3 h-3 text-[#10b981]" />
-            <span>DPIIT Registered</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3.5 py-1 text-[9px] font-mono rounded-full bg-white/5 border border-white/8 text-white">
-            <Shield className="w-3 h-3 text-[#8A2BE2]" />
-            <span>ISO 9001:2015 Certified</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3.5 py-1 text-[9px] font-mono rounded-full bg-white/5 border border-white/8 text-white">
             <Globe className="w-3 h-3 text-[#10b981]" />
-            <span>SIN Education and Technology Pvt. Ltd.</span>
+            <span>KSL Digital Studio</span>
           </div>
         </div>
       </section>
@@ -885,68 +877,38 @@ export default function AboutPage() {
           <div className="absolute right-0 top-0 w-[300px] h-[300px] rounded-full bg-[#8A2BE2]/10 blur-3xl pointer-events-none -z-10"></div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            <div className="lg:col-span-8">
+            <div className="lg:col-span-12">
               <span className="text-[10px] font-mono text-[#8A2BE2] tracking-widest uppercase">
                 FLAGSHIP CAMPUS INITIATIVE
               </span>
               <h2 className="font-heading font-black text-2xl md:text-4xl text-white tracking-wider uppercase mt-2.5">
-                SIN Education and Technology Pvt. Ltd.
+                KSL Digital Studio
               </h2>
               <p className="text-xs text-[#C4B5FD]/85 mt-4 leading-relaxed max-w-3xl">
-                IRIS 365 is designed, compiled, and maintained by SIN Education and Technology Private Limited under the
+                IRIS 365 is designed, compiled, and maintained by KSL Digital Studio under the
                 **Student Partnership Program 2026**, bridging the gap between student requirements and professional
                 enterprise infrastructure.
               </p>
 
               {/* Grid Link Details */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 mt-8 text-xs font-mono">
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[#C4B5FD]/40 uppercase tracking-widest text-[9px]">Web Node:</span>
-                  <a
-                    href="https://sintechnologies.in"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-purple-300 hover:text-white flex items-center gap-1 justify-center md:justify-start"
-                  >
-                    <span>sintechnologies.in</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
+              <div className="grid grid-cols-2 gap-5 mt-8 text-xs font-mono">
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[#C4B5FD]/40 uppercase tracking-widest text-[9px]">Contact Link:</span>
                   <a
-                    href="mailto:contact@sintechnologies.in"
+                    href="mailto:newiris365@gmail.com"
                     className="text-purple-300 hover:text-white flex items-center gap-1 justify-center md:justify-start"
                   >
-                    <span>contact@sintechnologies.in</span>
+                    <span>newiris365@gmail.com</span>
                     <Mail className="w-3 h-3" />
                   </a>
                 </div>
-                <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-1">
+                <div className="flex flex-col gap-1.5">
                   <span className="text-[#C4B5FD]/40 uppercase tracking-widest text-[9px]">Command HQ:</span>
                   <span className="text-white flex items-center gap-1 justify-center md:justify-start">
                     <MapPin className="w-3.5 h-3.5 text-[#8A2BE2]" />
                     <span>Jodhpur, Rajasthan</span>
                   </span>
                 </div>
-              </div>
-            </div>
-
-            {/* Badges Stack */}
-            <div className="lg:col-span-4 flex flex-row lg:flex-col items-center justify-center gap-4 border-t lg:border-t-0 lg:border-l border-white/8 pt-8 lg:pt-0 lg:pl-8">
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/2 border border-white/5 w-full max-w-[180px] text-center">
-                <span className="text-[8px] font-mono text-[#C4B5FD]/40 uppercase">REGISTRATION</span>
-                <span className="font-heading font-extrabold text-[#10b981] text-xs tracking-widest uppercase mt-2">
-                  DPIIT
-                </span>
-                <span className="text-[7px] font-mono text-[#C4B5FD]/60 mt-1">Govt. of India Certified</span>
-              </div>
-              <div className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/2 border border-white/5 w-full max-w-[180px] text-center">
-                <span className="text-[8px] font-mono text-[#C4B5FD]/40 uppercase">QUALITY ASSURED</span>
-                <span className="font-heading font-extrabold text-[#8A2BE2] text-xs tracking-widest uppercase mt-2">
-                  ISO 9001:2015
-                </span>
-                <span className="text-[7px] font-mono text-[#C4B5FD]/60 mt-1">Global Standard Audited</span>
               </div>
             </div>
           </div>
@@ -985,7 +947,7 @@ export default function AboutPage() {
               <h3 className="font-heading font-bold text-base text-white tracking-wide">Er. Harshvardhan Purohit</h3>
               <p className="text-[10px] font-mono text-[#C4B5FD]/50 uppercase mt-0.5 font-bold">Founder & CEO</p>
               <p className="text-xs text-[#C4B5FD]/70 mt-3 leading-relaxed">
-                Driving the high-level roadmap and structural alignment for SIN Technology's campus ecosystem.
+                Driving the high-level roadmap and structural alignment for KSL Digital Studio's campus ecosystem.
               </p>
             </div>
           </div>

@@ -281,7 +281,7 @@ function ContactFormContent() {
                   name="contactNumber"
                   value={formValues.contactNumber}
                   onChange={handleChange}
-                  placeholder="e.g. +91 73572 88703"
+                  placeholder="e.g. +91 86190 19653"
                   className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none transition-all duration-300 ${
                     errors.contactNumber
                       ? 'border-[#EF4444] focus:ring-4 focus:ring-[#EF4444]/15'
@@ -305,7 +305,7 @@ function ContactFormContent() {
                   name="email"
                   value={formValues.email}
                   onChange={handleChange}
-                  placeholder="e.g. contact@sintechnologies.in"
+                  placeholder="e.g. newiris365@gmail.com"
                   className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none transition-all duration-300 ${
                     errors.email
                       ? 'border-[#EF4444] focus:ring-4 focus:ring-[#EF4444]/15'
@@ -333,7 +333,7 @@ function ContactFormContent() {
                     name="institutionName"
                     value={formValues.institutionName}
                     onChange={handleChange}
-                    placeholder="e.g. SIET Jodhpur"
+                    placeholder="e.g. JIET Jodhpur"
                     className={`w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/5 border text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none transition-all duration-300 ${
                       errors.institutionName
                         ? 'border-[#EF4444] focus:ring-4 focus:ring-[#EF4444]/15'
@@ -457,7 +457,7 @@ function ContactFormContent() {
                   )}
                 </div>
                 <span className="text-xs text-slate-600 dark:text-slate-300 select-none leading-tight font-normal">
-                  I agree to receive updates and communications from SIN Education and Technology Pvt. Ltd.
+                  I agree to receive updates and communications from KSL Digital Studio.
                 </span>
               </label>
               {errors.consent && (
@@ -520,10 +520,10 @@ function ContactFormContent() {
                 </div>
                 <div>
                   <a
-                    href="tel:+917357288703"
+                    href="tel:+918619019653"
                     className="font-bold text-slate-900 dark:text-white hover:text-[#8A2BE2] transition-colors block"
                   >
-                    +91 73572 88703
+                    +91 86190 19653
                   </a>
                   <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 block">Mon–Sat, 10AM–6PM IST</span>
                 </div>
@@ -531,19 +531,16 @@ function ContactFormContent() {
 
               <div className="flex items-start gap-3.5">
                 <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
-                  <Globe className="w-4 h-4" />
+                  <Mail className="w-4 h-4" />
                 </div>
                 <div>
                   <a
-                    href="https://sintechnologies.in"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="mailto:newiris365@gmail.com"
                     className="font-bold text-slate-900 dark:text-white hover:text-[#8A2BE2] transition-colors flex items-center gap-1.5"
                   >
-                    <span>sintechnologies.in</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                    <span>newiris365@gmail.com</span>
                   </a>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 block">Enterprise Operations Gateway</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 block">Official Contact Dispatch</span>
                 </div>
               </div>
             </div>
@@ -573,7 +570,7 @@ function ContactFormContent() {
             </button>
           </motion.div>
 
-          {/* Card 3: About SIN Education & Tech */}
+          {/* Card 3: About KSL Digital Studio */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
@@ -582,31 +579,21 @@ function ContactFormContent() {
           >
             <div>
               <h3 className="font-orbitron font-bold text-xs uppercase tracking-widest text-teal-600 dark:text-teal-400">
-                CORPORATE PROFILE
+                STUDIO PROFILE
               </h3>
               <p className="text-xs font-mono text-slate-500 dark:text-slate-400 uppercase mt-0.5">
-                SIN Education & Technology Pvt. Ltd.
+                KSL Digital Studio
               </p>
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
-              Founded in 2024 and DPIIT registered, SIN Education & Technology Pvt. Ltd. bridges the gaps in traditional
-              education by leveraging AI, machine learning, and data analytics to optimize institutional workflows and
-              student outcomes.
+              Founded in 2024, KSL Digital Studio bridges the gaps in traditional education by leveraging AI, machine learning, and data analytics to optimize institutional workflows and student outcomes.
             </p>
 
             <div className="flex flex-wrap gap-2 mt-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-700 dark:text-white">
                 <MapPin className="w-3 h-3 text-[#10B981]" />
                 <span>Jodhpur, Rajasthan</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-700 dark:text-white">
-                <Users className="w-3 h-3 text-[#8A2BE2]" />
-                <span>51–200 Employees</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-mono text-slate-700 dark:text-white">
-                <Check className="w-3 h-3 text-[#10B981]" />
-                <span>ISO 9001:2015 Certified</span>
               </span>
             </div>
           </motion.div>
