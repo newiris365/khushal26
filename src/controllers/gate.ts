@@ -1,8 +1,122 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { supabaseAdmin } from '../config/supabase';
 import PDFDocument from 'pdfkit';
 import logger from '../config/logger';
+
+// In-memory cache for tracking single-use tokens within their validity window (60s)
+const processedGateQrTokens = new Map<string, number>();
+
+// Clean up stale token hashes every 2 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [hash, expiry] of processedGateQrTokens.entries()) {
+    if (expiry < now) {
+      processedGateQrTokens.delete(hash);
+    }
+  }
+}, 120000);
+
+export function getGateQrSecret(institutionId?: string): string {
+  return (
+    process.env.GATE_QR_SECRET ||
+    process.env.JWT_SECRET ||
+    (institutionId ? `${institutionId}_gate_qr_secret_key` : 'default_gate_qr_secret_key_iris365')
+  );
+}
+
+export function generateSignedGateQR(
+  payload: { person_id: string; timestamp: string | number; person_type: string },
+  institutionId?: string
+): string {
+  const secret = getGateQrSecret(institutionId);
+  const payloadStr = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  const base64Payload = Buffer.from(payloadStr).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(base64Payload).digest('hex');
+
+  return `${base64Payload}.${signature}`;
+}
+
+export function verifyAndDecodeGateQRToken(
+  qrToken: string,
+  institutionId?: string
+): { person_id: string; timestamp: string; person_type: string } {
+  const secret = getGateQrSecret(institutionId);
+
+  let base64Payload = '';
+  let signature = '';
+  let payloadObj: any = null;
+
+  const trimmedToken = qrToken.trim();
+  if (trimmedToken.startsWith('{')) {
+    // Format: JSON string containing { person_id, timestamp, person_type, signature }
+    try {
+      payloadObj = JSON.parse(trimmedToken);
+      if (!payloadObj || typeof payloadObj !== 'object') {
+        throw new Error('Invalid JSON payload in QR token.');
+      }
+      signature = payloadObj.signature;
+      if (!signature) {
+        throw new Error('Unsigned QR security token: Missing HMAC signature.');
+      }
+      // Reconstruct clean canonical payload string for signature verification (excluding signature field)
+      const { signature: _sig, ...cleanPayload } = payloadObj;
+      const cleanPayloadStr = JSON.stringify(cleanPayload);
+      base64Payload = Buffer.from(cleanPayloadStr).toString('base64url');
+    } catch (err: any) {
+      throw new Error(err.message || 'Invalid QR code token format.');
+    }
+  } else {
+    // Format: base64url(JSON_payload).signature
+    const lastDotIndex = trimmedToken.lastIndexOf('.');
+    if (lastDotIndex === -1) {
+      throw new Error('Invalid QR token format.');
+    }
+    base64Payload = trimmedToken.substring(0, lastDotIndex);
+    signature = trimmedToken.substring(lastDotIndex + 1);
+    try {
+      const decodedStr = Buffer.from(base64Payload, 'base64url').toString('utf-8');
+      payloadObj = JSON.parse(decodedStr);
+    } catch {
+      throw new Error('Invalid base64 payload in QR token.');
+    }
+  }
+
+  if (!signature) {
+    throw new Error('Unsigned QR security token: Missing HMAC signature.');
+  }
+
+  // Recompute HMAC signature over base64Payload using server secret
+  const expectedSignature = crypto.createHmac('sha256', secret).update(base64Payload).digest('hex');
+
+  const sigBuf = Buffer.from(signature);
+  const expectedBuf = Buffer.from(expectedSignature);
+
+  if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+    throw new Error('Invalid QR code security signature.');
+  }
+
+  const { person_id, timestamp, person_type } = payloadObj;
+  if (!person_id || !timestamp || !person_type) {
+    throw new Error('Incomplete QR code metadata.');
+  }
+
+  // Idempotency / Single-Use Check
+  const tokenHash = crypto.createHash('sha256').update(`${person_id}:${timestamp}:${signature}`).digest('hex');
+  const now = Date.now();
+  if (processedGateQrTokens.has(tokenHash)) {
+    const prevExpiry = processedGateQrTokens.get(tokenHash)!;
+    if (prevExpiry > now) {
+      throw new Error('Replayed QR token: Token has already been scanned.');
+    }
+  }
+
+  // Store in cache for 65 seconds
+  processedGateQrTokens.set(tokenHash, now + 65000);
+
+  return { person_id, timestamp, person_type };
+}
 
 // ========== ZOD VALIDATION SCHEMAS ==========
 
@@ -175,22 +289,21 @@ export async function entryQR(req: Request, res: Response) {
 
     const { qr_token, gate_number } = parse.data;
 
-    let payload: any;
+    let payload: { person_id: string; timestamp: string; person_type: string };
     try {
-      payload = JSON.parse(qr_token);
-    } catch {
-      return res.status(400).json({ success: false, error: 'Invalid QR code token format.' });
+      payload = verifyAndDecodeGateQRToken(qr_token, req.user?.institution_id);
+    } catch (err: any) {
+      return res.status(403).json({ success: false, error: err.message || 'Security QR code verification failed.' });
     }
 
     const { person_id, timestamp, person_type } = payload;
-    if (!person_id || !timestamp || !person_type) {
-      return res.status(400).json({ success: false, error: 'Incomplete QR code metadata.' });
-    }
 
     // Verify rotation timing claim (60 seconds limit check)
     const qrAge = Date.now() - new Date(timestamp).getTime();
     if (qrAge > 60000 || qrAge < -5000) {
-      return res.status(403).json({ success: false, error: 'Security QR code expired. Please refresh your pass screen.' });
+      return res
+        .status(403)
+        .json({ success: false, error: 'Security QR code expired. Please refresh your pass screen.' });
     }
 
     // Verify user profile is active
@@ -403,7 +516,9 @@ export async function entryRfid(req: Request, res: Response) {
     }
 
     if (card.is_blocked) {
-      return res.status(403).json({ success: false, error: `Card BLOCKED. Reason: ${card.blocked_reason || 'Unknown'}` });
+      return res
+        .status(403)
+        .json({ success: false, error: `Card BLOCKED. Reason: ${card.blocked_reason || 'Unknown'}` });
     }
 
     // Check expiry
@@ -607,7 +722,19 @@ export async function createVisitor(req: Request, res: Response) {
       return res.status(400).json({ success: false, error: parse.error.errors[0].message });
     }
 
-    const { visitor_name, visitor_phone, visitor_email, visitor_id_type, visitor_id_number, visitor_photo_url, host_id, host_type, host_name, purpose, valid_hours } = parse.data;
+    const {
+      visitor_name,
+      visitor_phone,
+      visitor_email,
+      visitor_id_type,
+      visitor_id_number,
+      visitor_photo_url,
+      host_id,
+      host_type,
+      host_name,
+      purpose,
+      valid_hours
+    } = parse.data;
 
     // A. Verify Blacklist checks
     const { data: blacklisted } = await supabaseAdmin
@@ -820,10 +947,7 @@ export async function exitVisitor(req: Request, res: Response) {
     }
 
     // Invalidate pass
-    await supabaseAdmin
-      .from('visitor_passes')
-      .update({ is_used: false })
-      .eq('id', id);
+    await supabaseAdmin.from('visitor_passes').update({ is_used: false }).eq('id', id);
 
     await updateOccupancyCounts(req.user?.institution_id!, 'visitor', 'out');
 
@@ -885,7 +1009,7 @@ export async function getOccupantsInside(req: Request, res: Response) {
 
     // Keep only the latest entry per person_id
     const latestEntriesMap: Record<string, any> = {};
-    for (const entry of (entries || [])) {
+    for (const entry of entries || []) {
       if (entry.person_id && !latestEntriesMap[entry.person_id]) {
         latestEntriesMap[entry.person_id] = entry;
       }
@@ -1271,8 +1395,8 @@ export async function getDailyReport(req: Request, res: Response) {
       .lte('timestamp', `${targetDate}T23:59:59Z`);
 
     const totalLogs = logs?.length || 0;
-    const entries = logs?.filter(l => l.direction === 'in').length || 0;
-    const exits = logs?.filter(l => l.direction === 'out').length || 0;
+    const entries = logs?.filter((l) => l.direction === 'in').length || 0;
+    const exits = logs?.filter((l) => l.direction === 'out').length || 0;
 
     // Fetch incidents count
     const { data: incs } = await supabaseAdmin
@@ -1333,7 +1457,12 @@ export async function getDailyReport(req: Request, res: Response) {
     doc.moveDown(2);
 
     // Footer signature notice
-    doc.fontSize(10).fillColor('#9CA3AF').text('Generated automatically by IRIS 365 Smart Gate Module. All logs signed by tenant security credentials.', { align: 'center' });
+    doc
+      .fontSize(10)
+      .fillColor('#9CA3AF')
+      .text('Generated automatically by IRIS 365 Smart Gate Module. All logs signed by tenant security credentials.', {
+        align: 'center'
+      });
 
     doc.end();
   } catch (err: any) {
@@ -1368,16 +1497,14 @@ export async function cctvAnomalyWebhook(req: Request, res: Response) {
 
     // Write security incident log if severity is medium or higher
     if (severity !== 'low') {
-      await supabaseAdmin
-        .from('gate_incidents')
-        .insert({
-          institution_id: institutionId,
-          incident_type: alarm_type,
-          description: alertDetails,
-          location: `Gate ${gate_number || 'Main'}`,
-          severity,
-          status: 'open'
-        });
+      await supabaseAdmin.from('gate_incidents').insert({
+        institution_id: institutionId,
+        incident_type: alarm_type,
+        description: alertDetails,
+        location: `Gate ${gate_number || 'Main'}`,
+        severity,
+        status: 'open'
+      });
     }
 
     // Broadcast CCTV threat alert to security console room
@@ -1428,19 +1555,15 @@ export async function triggerEmergencyMuster(req: Request, res: Response) {
     }
 
     // Fetch all student profiles to seed unaccounted list
-    const { data: students } = await supabaseAdmin
-      .from('students')
-      .select('id');
+    const { data: students } = await supabaseAdmin.from('students').select('id');
 
     if (students && students.length > 0) {
-      const responseSeeds = students.map(s => ({
+      const responseSeeds = students.map((s) => ({
         muster_id: muster.id,
         student_id: s.id,
         status: 'unaccounted'
       }));
-      await supabaseAdmin
-        .from('muster_responses')
-        .insert(responseSeeds);
+      await supabaseAdmin.from('muster_responses').insert(responseSeeds);
     }
 
     // Broadcast emergency muster notice to all connected mobile apps
@@ -1475,13 +1598,16 @@ export async function respondToMuster(req: Request, res: Response) {
 
     const { data, error } = await supabaseAdmin
       .from('muster_responses')
-      .upsert({
-        muster_id,
-        student_id: targetStudentId,
-        status: 'safe',
-        marked_safe_at: new Date().toISOString(),
-        location: location || 'Main Field'
-      }, { onConflict: 'muster_id,student_id' })
+      .upsert(
+        {
+          muster_id,
+          student_id: targetStudentId,
+          status: 'safe',
+          marked_safe_at: new Date().toISOString(),
+          location: location || 'Main Field'
+        },
+        { onConflict: 'muster_id,student_id' }
+      )
       .select()
       .single();
 
@@ -1522,8 +1648,8 @@ export async function getLiveMuster(req: Request, res: Response) {
       return res.status(500).json({ success: false, error: error.message });
     }
 
-    const safeList = responses ? responses.filter(r => r.status === 'safe') : [];
-    const unaccountedList = responses ? responses.filter(r => r.status === 'unaccounted') : [];
+    const safeList = responses ? responses.filter((r) => r.status === 'safe') : [];
+    const unaccountedList = responses ? responses.filter((r) => r.status === 'unaccounted') : [];
 
     return res.status(200).json({
       success: true,
@@ -1563,19 +1689,15 @@ export async function getMusterReport(req: Request, res: Response) {
   try {
     const { id } = req.params;
 
-    const { data: muster } = await supabaseAdmin
-      .from('emergency_muster')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data: muster } = await supabaseAdmin.from('emergency_muster').select('*').eq('id', id).single();
 
     const { data: responses } = await supabaseAdmin
       .from('muster_responses')
       .select('*, students(*, users(name))')
       .eq('muster_id', id);
 
-    const safeList = responses ? responses.filter(r => r.status === 'safe') : [];
-    const unaccountedList = responses ? responses.filter(r => r.status === 'unaccounted') : [];
+    const safeList = responses ? responses.filter((r) => r.status === 'safe') : [];
+    const unaccountedList = responses ? responses.filter((r) => r.status === 'unaccounted') : [];
 
     const reportText = `========================================================================
 CAMPUS MUSTER EMERGENCY REPORT
@@ -1590,10 +1712,10 @@ SAFETY STATS:
    - Safety compliance rate: ${Math.round((safeList.length / (responses?.length || 1)) * 100)}%
 
 SAFE COMMUTERS LIST BY LOCATION:
-${safeList.map(s => `   * ${s.students?.users?.name} - ${s.location} (${new Date(s.marked_safe_at).toLocaleTimeString()})`).join('\n')}
+${safeList.map((s) => `   * ${s.students?.users?.name} - ${s.location} (${new Date(s.marked_safe_at).toLocaleTimeString()})`).join('\n')}
 
 UNACCOUNTED COMMUTERS:
-${unaccountedList.map(u => `   * ${u.students?.users?.name || 'Student'}`).join('\n')}
+${unaccountedList.map((u) => `   * ${u.students?.users?.name || 'Student'}`).join('\n')}
 ========================================================================`;
 
     return res.status(200).json({
@@ -1811,9 +1933,7 @@ export async function signoffWorkPermit(req: Request, res: Response) {
 
 export async function getWorkPermits(req: Request, res: Response) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('work_permits')
-      .select('*, contractor_profiles(*)');
+    const { data, error } = await supabaseAdmin.from('work_permits').select('*, contractor_profiles(*)');
 
     if (error) {
       return res.status(500).json({ success: false, error: error.message });
@@ -1822,13 +1942,13 @@ export async function getWorkPermits(req: Request, res: Response) {
     // Verify suspcious contractors (>5 visits a month)
     const monthlyPermits = data || [];
     const countMap: any = {};
-    monthlyPermits.forEach(p => {
+    monthlyPermits.forEach((p) => {
       countMap[p.contractor_id] = (countMap[p.contractor_id] || 0) + 1;
     });
 
-    const flaggedContractorIds = Object.keys(countMap).filter(id => countMap[id] > 5);
+    const flaggedContractorIds = Object.keys(countMap).filter((id) => countMap[id] > 5);
 
-    const mappedPermits = monthlyPermits.map(p => ({
+    const mappedPermits = monthlyPermits.map((p) => ({
       ...p,
       flagged_suspicious: flaggedContractorIds.includes(p.contractor_id)
     }));
@@ -1914,10 +2034,7 @@ export async function logParkingExit(req: Request, res: Response) {
       .maybeSingle();
 
     if (activeLog) {
-      await supabaseAdmin
-        .from('parking_logs')
-        .update({ out_time: new Date().toISOString() })
-        .eq('id', activeLog.id);
+      await supabaseAdmin.from('parking_logs').update({ out_time: new Date().toISOString() }).eq('id', activeLog.id);
     }
 
     // Vacate parking slot in parking_slots table
@@ -2104,7 +2221,9 @@ export async function toggleLockdown(req: Request, res: Response) {
       }
     } catch {}
 
-    return res.status(200).json({ success: true, message: `Campus lockdown status set to ${is_locked_down}.`, lockdown });
+    return res
+      .status(200)
+      .json({ success: true, message: `Campus lockdown status set to ${is_locked_down}.`, lockdown });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message || 'Internal server error.' });
   }
@@ -2147,13 +2266,13 @@ export async function getGateAnalytics(req: Request, res: Response) {
 
     if (entErr) return res.status(500).json({ success: false, error: entErr.message });
 
-    const totalEntries = (entries || []).filter(e => e.direction === 'in').length;
-    const totalExits = (entries || []).filter(e => e.direction === 'out').length;
+    const totalEntries = (entries || []).filter((e) => e.direction === 'in').length;
+    const totalExits = (entries || []).filter((e) => e.direction === 'out').length;
 
     // B. Breakdown by type
-    const studentCount = (entries || []).filter(e => e.person_type === 'student').length;
-    const staffCount = (entries || []).filter(e => e.person_type === 'staff').length;
-    const visitorCount = (entries || []).filter(e => e.person_type === 'visitor').length;
+    const studentCount = (entries || []).filter((e) => e.person_type === 'student').length;
+    const staffCount = (entries || []).filter((e) => e.person_type === 'staff').length;
+    const visitorCount = (entries || []).filter((e) => e.person_type === 'visitor').length;
 
     // C. Live occupancy count
     const { data: occupancy } = await supabaseAdmin
@@ -2172,7 +2291,7 @@ export async function getGateAnalytics(req: Request, res: Response) {
       .gte('created_at', `${todayStr}T00:00:00Z`);
 
     const incidentSeverityBreakdown = { low: 0, medium: 0, high: 0, critical: 0 };
-    (incidents || []).forEach(inc => {
+    (incidents || []).forEach((inc) => {
       const sev = inc.severity?.toLowerCase();
       if (sev === 'low' || sev === 'medium' || sev === 'high' || sev === 'critical') {
         incidentSeverityBreakdown[sev as 'low' | 'medium' | 'high' | 'critical']++;
@@ -2181,7 +2300,7 @@ export async function getGateAnalytics(req: Request, res: Response) {
 
     // E. Hourly distribution (entries)
     const hourlyTraffic = Array(24).fill(0);
-    (entries || []).forEach(e => {
+    (entries || []).forEach((e) => {
       if (e.direction === 'in') {
         const hour = new Date(e.timestamp).getHours();
         hourlyTraffic[hour]++;
@@ -2292,9 +2411,10 @@ export async function checkinVisitorQR(req: Request, res: Response) {
       }
     } catch {}
 
-    return res.status(200).json({ success: true, message: 'Visitor QR check-in successful.', pass: updatedPass, entry });
+    return res
+      .status(200)
+      .json({ success: true, message: 'Visitor QR check-in successful.', pass: updatedPass, entry });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message || 'Internal server error.' });
   }
 }
-

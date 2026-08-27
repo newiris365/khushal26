@@ -49,7 +49,7 @@ async function logPermissionDenial(req: Request, logType: 'feature' | 'module', 
   try {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
-    
+
     // Execute DB insert asynchronously without blocking the client response
     supabaseServiceRole
       .from('permission_audit_log')
@@ -76,8 +76,14 @@ async function logPermissionDenial(req: Request, logType: 'feature' | 'module', 
 // Feature toggle check: blocks access if a module is disabled for the institution
 export function requireFeature(featureKey: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const institutionId = req.user?.institution_id || req.body?.institution_id || req.query?.institution_id;
-    
+    // For authenticated requests, strictly use req.user.institution_id (do NOT accept body/query overrides)
+    let institutionId: string | undefined;
+    if (req.user) {
+      institutionId = req.user.institution_id;
+    } else {
+      institutionId = (req.body?.institution_id as string) || (req.query?.institution_id as string);
+    }
+
     if (!institutionId) {
       // If we cannot determine the institution and there is no user, allow it to pass.
       // This allows public routes (like /register) to function if they don't have institution_id.
@@ -130,7 +136,9 @@ export function requireFeature(featureKey: string) {
       next();
     } catch (err) {
       console.error('Feature check error:', err);
-      return res.status(500).json({ success: false, error: 'Internal server error performing feature enablement check.' });
+      return res
+        .status(500)
+        .json({ success: false, error: 'Internal server error performing feature enablement check.' });
     }
   };
 }
@@ -183,7 +191,9 @@ export function requireModulePermission(module: string, action: 'read' | 'write'
       } catch (err) {
         console.error('Permission check error:', err);
         // Fail-closed in production
-        return res.status(500).json({ success: false, error: 'Internal server error performing role permission validation.' });
+        return res
+          .status(500)
+          .json({ success: false, error: 'Internal server error performing role permission validation.' });
       }
     }
 

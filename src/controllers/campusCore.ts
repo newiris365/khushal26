@@ -30,9 +30,9 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
   const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
 
-  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-            Math.cos(phi1) * Math.cos(phi2) *
-            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // in meters
@@ -81,7 +81,10 @@ async function getMethodConfig(institutionId: string, method: string): Promise<R
 }
 
 // Check if a date is an academic holiday for the institution (#2 concurrent queries + #3 caching)
-async function isDateHoliday(institutionId: string, date: string): Promise<{ isHoliday: boolean; holidayName?: string }> {
+async function isDateHoliday(
+  institutionId: string,
+  date: string
+): Promise<{ isHoliday: boolean; holidayName?: string }> {
   const cacheKey = `${institutionId}:${date}`;
   const cached = holidayCache.get(cacheKey);
   if (cached !== undefined) return cached;
@@ -101,7 +104,7 @@ async function isDateHoliday(institutionId: string, date: string): Promise<{ isH
         .in('event_type', ['holiday', 'vacation'])
         .lte('start_date', date)
         .gte('end_date', date)
-        .maybeSingle(),
+        .maybeSingle()
     ]);
 
     let res: { isHoliday: boolean; holidayName?: string };
@@ -134,10 +137,10 @@ export async function autoStartSessions(req: Request, res: Response) {
     // Check if today is a holiday
     const holidayCheck = await isDateHoliday(institutionId, dateStr);
     if (holidayCheck.isHoliday) {
-      return res.status(200).json({ 
-        success: true, 
+      return res.status(200).json({
+        success: true,
         message: `Today is a holiday (${holidayCheck.holidayName}). No sessions created.`,
-        sessionsCreated: 0 
+        sessionsCreated: 0
       });
     }
 
@@ -149,10 +152,10 @@ export async function autoStartSessions(req: Request, res: Response) {
       .eq('day_of_week', dayName);
 
     if (ttError || !timetableEntries || timetableEntries.length === 0) {
-      return res.status(200).json({ 
-        success: true, 
+      return res.status(200).json({
+        success: true,
         message: 'No timetable entries found for today.',
-        sessionsCreated: 0 
+        sessionsCreated: 0
       });
     }
 
@@ -232,9 +235,10 @@ export async function autoStartSessions(req: Request, res: Response) {
 
     return res.status(200).json({
       success: true,
-      message: createdSessions.length > 0 
-        ? `Auto-created ${createdSessions.length} attendance session(s) for today.` 
-        : 'No new sessions to create at this time.',
+      message:
+        createdSessions.length > 0
+          ? `Auto-created ${createdSessions.length} attendance session(s) for today.`
+          : 'No new sessions to create at this time.',
       sessionsCreated: createdSessions.length,
       sessions: createdSessions
     });
@@ -275,10 +279,8 @@ export async function getTimetableForDate(req: Request, res: Response) {
       .eq('date', dateStr);
 
     // Merge timetable with session status
-    const classesWithStatus = (timetableEntries || []).map(entry => {
-      const session = sessions?.find(s => 
-        s.subject === entry.subject && s.time_slot === entry.time_slot
-      );
+    const classesWithStatus = (timetableEntries || []).map((entry) => {
+      const session = sessions?.find((s) => s.subject === entry.subject && s.time_slot === entry.time_slot);
       return {
         ...entry,
         teacher_name: entry.staff?.users?.name || null,
@@ -306,7 +308,13 @@ export async function getTimetableForDate(req: Request, res: Response) {
 // =========================================================================
 import { sendPushNotification } from '../services/fcm';
 
-async function notifyParent(studentId: string, type: string, title: string, message: string, metadata: Record<string, any> = {}) {
+async function notifyParent(
+  studentId: string,
+  type: string,
+  title: string,
+  message: string,
+  metadata: Record<string, any> = {}
+) {
   try {
     const { data: parentLinks } = await supabaseAdmin
       .from('parent_student_links')
@@ -323,7 +331,7 @@ async function notifyParent(studentId: string, type: string, title: string, mess
         notification_type: type,
         title,
         message,
-        metadata,
+        metadata
       });
       await sendPushNotification(link.parent_user_id, title, message, { type, student_id: studentId, ...metadata });
     }
@@ -336,7 +344,7 @@ async function notifyParent(studentId: string, type: string, title: string, mess
 async function notifyParentsBulk(records: Array<{ student_id: string; date: string }>) {
   try {
     if (!records || records.length === 0) return;
-    const studentIds = Array.from(new Set(records.map(r => r.student_id)));
+    const studentIds = Array.from(new Set(records.map((r) => r.student_id)));
 
     // Batch query 1: Fetch all student names in a single query (#4)
     const { data: studentRows } = await supabaseAdmin
@@ -364,7 +372,7 @@ async function notifyParentsBulk(records: Array<{ student_id: string; date: stri
 
     for (const link of parentLinks) {
       const studentName = studentNameMap.get(link.student_id) || 'Your child';
-      const rec = records.find(r => r.student_id === link.student_id);
+      const rec = records.find((r) => r.student_id === link.student_id);
       const dateStr = rec?.date || new Date().toISOString().split('T')[0];
       const title = 'Student Absent Today';
       const message = `${studentName} was marked absent today (${dateStr}). - IRIS 365`;
@@ -376,7 +384,7 @@ async function notifyParentsBulk(records: Array<{ student_id: string; date: stri
         notification_type: 'student_absent',
         title,
         message,
-        metadata,
+        metadata
       });
 
       pushTasks.push(
@@ -398,7 +406,11 @@ async function notifyParentsBulk(records: Array<{ student_id: string; date: stri
 
 async function checkAndNotifyLowAttendance(studentId: string, institutionId: string) {
   try {
-    const { data: student } = await supabaseAdmin.from('students').select('id, users(full_name)').eq('id', studentId).single();
+    const { data: student } = await supabaseAdmin
+      .from('students')
+      .select('id, users(full_name)')
+      .eq('id', studentId)
+      .single();
     if (!student) return;
 
     const studentName = (student as any).users?.full_name || 'Your child';
@@ -414,7 +426,7 @@ async function checkAndNotifyLowAttendance(studentId: string, institutionId: str
     if (!logs || logs.length === 0) return;
 
     let presentCount = 0;
-    logs.forEach(l => {
+    logs.forEach((l) => {
       if (l.status === 'Present' || l.status === 'Leave') presentCount += 1;
       else if (l.status === 'Half-Day') presentCount += 0.5;
     });
@@ -436,7 +448,11 @@ async function checkAndNotifyLowAttendance(studentId: string, institutionId: str
 }
 
 // Generate a rotating QR token and store in qr_tokens table
-export async function generateRotatingQrToken(sessionId: string, institutionId: string, rotateIntervalMinutes: number): Promise<string> {
+export async function generateRotatingQrToken(
+  sessionId: string,
+  institutionId: string,
+  rotateIntervalMinutes: number
+): Promise<string> {
   const expiresAt = new Date(Date.now() + rotateIntervalMinutes * 60 * 1000).toISOString();
   const token = jwt.sign(
     { session_id: sessionId, type: 'ATTENDANCE_QR', iat: Math.floor(Date.now() / 1000) },
@@ -446,23 +462,17 @@ export async function generateRotatingQrToken(sessionId: string, institutionId: 
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
   // Deactivate previous tokens for this session
-  await supabaseAdmin
-    .from('qr_tokens')
-    .update({ is_active: false })
-    .eq('session_id', sessionId)
-    .eq('is_active', true);
+  await supabaseAdmin.from('qr_tokens').update({ is_active: false }).eq('session_id', sessionId).eq('is_active', true);
 
   // Store new token
-  await supabaseAdmin
-    .from('qr_tokens')
-    .insert({
-      institution_id: institutionId,
-      session_id: sessionId,
-      token_hash: tokenHash,
-      expires_at: expiresAt,
-      is_active: true,
-      rotated_count: 0
-    });
+  await supabaseAdmin.from('qr_tokens').insert({
+    institution_id: institutionId,
+    session_id: sessionId,
+    token_hash: tokenHash,
+    expires_at: expiresAt,
+    is_active: true,
+    rotated_count: 0
+  });
 
   return token;
 }
@@ -525,10 +535,12 @@ const biometricSchema = z.object({
 
 const bulkAttendanceSchema = z.object({
   session_id: z.string().uuid(),
-  records: z.array(z.object({
-    student_id: z.string().uuid(),
-    status: z.enum(['present', 'absent', 'late', 'excused'])
-  }))
+  records: z.array(
+    z.object({
+      student_id: z.string().uuid(),
+      status: z.enum(['present', 'absent', 'late', 'excused'])
+    })
+  )
 });
 
 const regularizationSchema = z.object({
@@ -595,11 +607,11 @@ const noticeSchema = z.object({
 });
 
 const courseRegisterSchema = z.object({
-  course_id: z.string().uuid(),
+  course_id: z.string().uuid()
 });
 
 const courseDropSchema = z.object({
-  registration_id: z.string().uuid(),
+  registration_id: z.string().uuid()
 });
 
 const examSchema = z.object({
@@ -614,13 +626,15 @@ const markEntrySchema = z.object({
   exam_id: z.string().uuid(),
   subject: z.string(),
   is_grade_only: z.boolean().optional(),
-  records: z.array(z.object({
-    student_id: z.string().uuid(),
-    marks_obtained: z.number().min(0).optional().default(0),
-    max_marks: z.number().positive().optional().default(100),
-    grade: z.string().optional(),
-    remarks: z.string().optional()
-  }))
+  records: z.array(
+    z.object({
+      student_id: z.string().uuid(),
+      marks_obtained: z.number().min(0).optional().default(0),
+      max_marks: z.number().positive().optional().default(100),
+      grade: z.string().optional(),
+      remarks: z.string().optional()
+    })
+  )
 });
 
 const idCardTemplateSchema = z.object({
@@ -628,11 +642,11 @@ const idCardTemplateSchema = z.object({
 });
 
 const enrollExamSchema = z.object({
-  exam_id: z.string().uuid(),
+  exam_id: z.string().uuid()
 });
 
 const generateTicketsSchema = z.object({
-  exam_id: z.string().uuid(),
+  exam_id: z.string().uuid()
 });
 
 // =========================================================================
@@ -651,9 +665,9 @@ export async function startSession(req: Request, res: Response) {
     const today = new Date().toISOString().split('T')[0];
     const holidayCheck = await isDateHoliday(institutionId, today);
     if (holidayCheck.isHoliday) {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot start attendance session on a holiday (${holidayCheck.holidayName}). Today is ${today}.` 
+      return res.status(400).json({
+        success: false,
+        error: `Cannot start attendance session on a holiday (${holidayCheck.holidayName}). Today is ${today}.`
       });
     }
 
@@ -721,11 +735,7 @@ export async function startSession(req: Request, res: Response) {
 export async function getSessionQr(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { data: session, error } = await supabaseAdmin
-      .from('attendance_sessions')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data: session, error } = await supabaseAdmin.from('attendance_sessions').select('*').eq('id', id).single();
 
     if (error || !session) return res.status(404).json({ success: false, error: 'Session not found.' });
 
@@ -750,10 +760,12 @@ export async function getSessionQr(req: Request, res: Response) {
 export async function markAttendanceQr(req: Request, res: Response) {
   try {
     const parse = qrVerificationSchema.safeParse(req.body);
-    if (!parse.success) return res.status(400).json({ success: false, error: parse.error.errors[0].message, requestId: req.id });
+    if (!parse.success)
+      return res.status(400).json({ success: false, error: parse.error.errors[0].message, requestId: req.id });
     const { token, latitude, longitude, device_id } = parse.data;
     const institutionId = req.user?.institution_id;
-    if (!institutionId) return res.status(400).json({ success: false, error: 'Institution context required.', requestId: req.id });
+    if (!institutionId)
+      return res.status(400).json({ success: false, error: 'Institution context required.', requestId: req.id });
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -761,24 +773,28 @@ export async function markAttendanceQr(req: Request, res: Response) {
     const [holidayCheck, qrEnabled, studentResult] = await Promise.all([
       isDateHoliday(institutionId, today),
       isMethodEnabled(institutionId, 'qr'),
-      supabaseAdmin.from('students').select('id').eq('user_id', req.user?.id).single(),
+      supabaseAdmin.from('students').select('id').eq('user_id', req.user?.id).single()
     ]);
 
     if (holidayCheck.isHoliday) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         error: `Cannot mark attendance on a holiday (${holidayCheck.holidayName}). Today is ${today}.`,
         requestId: req.id
       });
     }
 
     if (!qrEnabled) {
-      return res.status(403).json({ success: false, error: 'QR attendance is not enabled for your institution.', requestId: req.id });
+      return res
+        .status(403)
+        .json({ success: false, error: 'QR attendance is not enabled for your institution.', requestId: req.id });
     }
 
     const { data: student, error: stdErr } = studentResult;
     if (stdErr || !student) {
-      return res.status(404).json({ success: false, error: 'Student profile not mapped to current login credentials.', requestId: req.id });
+      return res
+        .status(404)
+        .json({ success: false, error: 'Student profile not mapped to current login credentials.', requestId: req.id });
     }
 
     // Decode JWT first to get session_id
@@ -788,7 +804,8 @@ export async function markAttendanceQr(req: Request, res: Response) {
     } catch {
       return res.status(401).json({ success: false, error: 'QR token expired or invalid.', requestId: req.id });
     }
-    if (decoded.type !== 'ATTENDANCE_QR') return res.status(400).json({ success: false, error: 'Invalid QR token structure.', requestId: req.id });
+    if (decoded.type !== 'ATTENDANCE_QR')
+      return res.status(400).json({ success: false, error: 'Invalid QR token structure.', requestId: req.id });
 
     // Validate token against qr_tokens table and fetch attendance_sessions in parallel (#1)
     const [tokenValidation, sessionResult] = await Promise.all([
@@ -797,7 +814,7 @@ export async function markAttendanceQr(req: Request, res: Response) {
         .from('attendance_sessions')
         .select('geo_lat, geo_lng, geo_radius, is_active')
         .eq('id', decoded.session_id)
-        .maybeSingle(),
+        .maybeSingle()
     ]);
 
     if (!tokenValidation.valid) {
@@ -806,7 +823,8 @@ export async function markAttendanceQr(req: Request, res: Response) {
 
     const session = sessionResult.data;
     if (!session) return res.status(404).json({ success: false, error: 'Session not found.', requestId: req.id });
-    if (!session.is_active) return res.status(400).json({ success: false, error: 'This session has been closed.', requestId: req.id });
+    if (!session.is_active)
+      return res.status(400).json({ success: false, error: 'This session has been closed.', requestId: req.id });
 
     // Geo-fence verification using per-session coordinates
     const campLat = session.geo_lat || DEFAULT_CAMPUS_LAT;
@@ -814,27 +832,37 @@ export async function markAttendanceQr(req: Request, res: Response) {
     const maxRadius = session.geo_radius || DEFAULT_MAX_RADIUS_METERS;
     const distance = calculateDistance(latitude, longitude, campLat, campLng);
     if (distance > maxRadius) {
-      return res.status(400).json({ success: false, error: `Not on campus. You are ${Math.round(distance)}m away (max ${maxRadius}m).`, requestId: req.id });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: `Not on campus. You are ${Math.round(distance)}m away (max ${maxRadius}m).`,
+          requestId: req.id
+        });
     }
 
     // Atomic upsert to eliminate duplicate check race conditions (#6)
     const { data, error } = await supabaseAdmin
       .from('attendance')
-      .upsert({
-        institution_id: institutionId,
-        student_id: student.id,
-        session_id: decoded.session_id,
-        date: today,
-        status: 'present',
-        marked_by: req.user?.id,
-        method: 'qr',
-        latitude,
-        longitude,
-        device_id
-      }, { onConflict: 'student_id,session_id', ignoreDuplicates: true })
+      .upsert(
+        {
+          institution_id: institutionId,
+          student_id: student.id,
+          session_id: decoded.session_id,
+          date: today,
+          status: 'present',
+          marked_by: req.user?.id,
+          method: 'qr',
+          latitude,
+          longitude,
+          device_id
+        },
+        { onConflict: 'student_id,session_id', ignoreDuplicates: true }
+      )
       .select();
 
-    if (error) return res.status(500).json({ success: false, error: 'Failed to record attendance.', requestId: req.id });
+    if (error)
+      return res.status(500).json({ success: false, error: 'Failed to record attendance.', requestId: req.id });
 
     if (!data || data.length === 0) {
       return res.status(409).json({ success: true, message: 'Already marked present' });
@@ -867,15 +895,17 @@ export async function markAttendanceBiometric(req: Request, res: Response) {
     const today = new Date().toISOString().split('T')[0];
     const holidayCheck = await isDateHoliday(institutionId, today);
     if (holidayCheck.isHoliday) {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot mark attendance on a holiday (${holidayCheck.holidayName}). Today is ${today}.` 
+      return res.status(400).json({
+        success: false,
+        error: `Cannot mark attendance on a holiday (${holidayCheck.holidayName}). Today is ${today}.`
       });
     }
 
     // Check if biometric method is enabled
     if (!(await isMethodEnabled(institutionId, 'biometric'))) {
-      return res.status(403).json({ success: false, error: 'Biometric attendance is not enabled for your institution.' });
+      return res
+        .status(403)
+        .json({ success: false, error: 'Biometric attendance is not enabled for your institution.' });
     }
 
     // Look for active session today in the student's department (prefer matching department, fallback to any)
@@ -909,7 +939,8 @@ export async function markAttendanceBiometric(req: Request, res: Response) {
       session = anySession;
     }
 
-    if (!session) return res.status(404).json({ success: false, error: 'No active attendance sessions scheduled for today.' });
+    if (!session)
+      return res.status(404).json({ success: false, error: 'No active attendance sessions scheduled for today.' });
 
     const { data, error } = await supabaseAdmin
       .from('attendance')
@@ -926,7 +957,8 @@ export async function markAttendanceBiometric(req: Request, res: Response) {
       .single();
 
     if (error) {
-      if (error.code === '23505') return res.status(409).json({ success: false, error: 'Attendance already recorded for this session.' });
+      if (error.code === '23505')
+        return res.status(409).json({ success: false, error: 'Attendance already recorded for this session.' });
       return res.status(500).json({ success: false, error: 'Failed to record biometric attendance.' });
     }
 
@@ -939,10 +971,12 @@ export async function markAttendanceBiometric(req: Request, res: Response) {
 export async function markAttendanceBulk(req: Request, res: Response) {
   try {
     const parse = bulkAttendanceSchema.safeParse(req.body);
-    if (!parse.success) return res.status(400).json({ success: false, error: parse.error.errors[0].message, requestId: req.id });
+    if (!parse.success)
+      return res.status(400).json({ success: false, error: parse.error.errors[0].message, requestId: req.id });
     const { session_id, records } = parse.data;
     const institutionId = req.user?.institution_id;
-    if (!institutionId) return res.status(400).json({ success: false, error: 'Institution context required.', requestId: req.id });
+    if (!institutionId)
+      return res.status(400).json({ success: false, error: 'Institution context required.', requestId: req.id });
     const date = new Date().toISOString().split('T')[0];
 
     // Concurrently verify holiday, manual method, and session existence (#1 & #5)
@@ -953,20 +987,23 @@ export async function markAttendanceBulk(req: Request, res: Response) {
     ]);
 
     if (holidayCheck.isHoliday) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         error: `Cannot mark attendance on a holiday (${holidayCheck.holidayName}). Today is ${date}.`,
         requestId: req.id
       });
     }
 
     if (!manualEnabled) {
-      return res.status(403).json({ success: false, error: 'Manual attendance is not enabled for your institution.', requestId: req.id });
+      return res
+        .status(403)
+        .json({ success: false, error: 'Manual attendance is not enabled for your institution.', requestId: req.id });
     }
 
-    if (!sessionResult.data) return res.status(404).json({ success: false, error: 'Session not found.', requestId: req.id });
+    if (!sessionResult.data)
+      return res.status(404).json({ success: false, error: 'Session not found.', requestId: req.id });
 
-    const logs = records.map(rec => ({
+    const logs = records.map((rec) => ({
       institution_id: institutionId,
       student_id: rec.student_id,
       session_id,
@@ -987,7 +1024,7 @@ export async function markAttendanceBulk(req: Request, res: Response) {
     const absentRecords = records.filter((r: any) => r.status.toLowerCase() === 'absent');
     if (absentRecords.length > 0) {
       enqueueTask('notifyParentsBulk', async () => {
-        await notifyParentsBulk(absentRecords.map(r => ({ student_id: r.student_id, date })));
+        await notifyParentsBulk(absentRecords.map((r) => ({ student_id: r.student_id, date })));
       });
     }
 
@@ -1001,16 +1038,19 @@ export async function markSchoolAttendanceBulk(req: Request, res: Response) {
   try {
     const { date, academic_year, records } = req.body;
     const institutionId = req.user?.institution_id;
-    if (!institutionId) return res.status(400).json({ success: false, error: 'Institution context required.', requestId: req.id });
+    if (!institutionId)
+      return res.status(400).json({ success: false, error: 'Institution context required.', requestId: req.id });
     if (!date || !academic_year || !Array.isArray(records) || records.length === 0) {
-      return res.status(400).json({ success: false, error: 'date, academic_year, and records are required.', requestId: req.id });
+      return res
+        .status(400)
+        .json({ success: false, error: 'date, academic_year, and records are required.', requestId: req.id });
     }
 
     // Check if the date is a holiday
     const holidayCheck = await isDateHoliday(institutionId, date);
     if (holidayCheck.isHoliday) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         error: `Cannot mark attendance on a holiday (${holidayCheck.holidayName}). Date: ${date}`,
         requestId: req.id
       });
@@ -1037,7 +1077,7 @@ export async function markSchoolAttendanceBulk(req: Request, res: Response) {
     const absentRecords = records.filter((r: any) => r.status.toLowerCase() === 'absent');
     if (absentRecords.length > 0) {
       enqueueTask('notifyParentsBulkSchool', async () => {
-        await notifyParentsBulk(absentRecords.map(r => ({ student_id: r.student_id, date })));
+        await notifyParentsBulk(absentRecords.map((r) => ({ student_id: r.student_id, date })));
         const uniqueStudentIds = [...new Set(records.map((r: any) => r.student_id))];
         for (const sid of uniqueStudentIds) {
           await checkAndNotifyLowAttendance(sid, institutionId);
@@ -1045,9 +1085,17 @@ export async function markSchoolAttendanceBulk(req: Request, res: Response) {
       });
     }
 
-    return res.status(200).json({ success: true, count: dbRecords.length, message: 'Daily school attendance register updated successfully.' });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        count: dbRecords.length,
+        message: 'Daily school attendance register updated successfully.'
+      });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message || 'Failed to update daily attendance register.', requestId: req.id });
+    return res
+      .status(500)
+      .json({ success: false, error: err.message || 'Failed to update daily attendance register.', requestId: req.id });
   }
 }
 
@@ -1100,19 +1148,12 @@ export async function closeSession(req: Request, res: Response) {
     if (!session.is_active) return res.status(400).json({ success: false, error: 'Session already closed.' });
 
     // Deactivate all QR tokens for this session
-    await supabaseAdmin
-      .from('qr_tokens')
-      .update({ is_active: false })
-      .eq('session_id', id)
-      .eq('is_active', true);
+    await supabaseAdmin.from('qr_tokens').update({ is_active: false }).eq('session_id', id).eq('is_active', true);
 
     // Find all students in the department who did NOT get marked
-    const { data: markedStudents } = await supabaseAdmin
-      .from('attendance')
-      .select('student_id')
-      .eq('session_id', id);
+    const { data: markedStudents } = await supabaseAdmin.from('attendance').select('student_id').eq('session_id', id);
 
-    const markedIds = new Set((markedStudents || []).map(m => m.student_id));
+    const markedIds = new Set((markedStudents || []).map((m) => m.student_id));
 
     // Get students in this department
     const { data: deptStudents } = await supabaseAdmin
@@ -1123,8 +1164,8 @@ export async function closeSession(req: Request, res: Response) {
 
     // Auto-mark absent for students not yet marked
     const absentRecords = (deptStudents || [])
-      .filter(s => !markedIds.has(s.id))
-      .map(s => ({
+      .filter((s) => !markedIds.has(s.id))
+      .map((s) => ({
         institution_id: institutionId,
         student_id: s.id,
         session_id: id,
@@ -1135,9 +1176,7 @@ export async function closeSession(req: Request, res: Response) {
       }));
 
     if (absentRecords.length > 0) {
-      await supabaseAdmin
-        .from('attendance')
-        .upsert(absentRecords, { onConflict: 'student_id,session_id' });
+      await supabaseAdmin.from('attendance').upsert(absentRecords, { onConflict: 'student_id,session_id' });
     }
 
     // Close the session
@@ -1181,7 +1220,9 @@ export async function registerAttendanceDevice(req: Request, res: Response) {
   try {
     const { device_name, device_type, device_serial, department_id, firmware_version } = req.body;
     if (!device_name || !device_type || !device_serial) {
-      return res.status(400).json({ success: false, error: 'device_name, device_type, and device_serial are required.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'device_name, device_type, and device_serial are required.' });
     }
     if (!['biometric', 'rfid', 'hybrid'].includes(device_type)) {
       return res.status(400).json({ success: false, error: 'device_type must be biometric, rfid, or hybrid.' });
@@ -1201,7 +1242,8 @@ export async function registerAttendanceDevice(req: Request, res: Response) {
       .single();
 
     if (error) {
-      if (error.code === '23505') return res.status(409).json({ success: false, error: 'Device serial already registered.' });
+      if (error.code === '23505')
+        return res.status(409).json({ success: false, error: 'Device serial already registered.' });
       throw error;
     }
     return res.status(201).json({ success: true, device: data });
@@ -1318,7 +1360,7 @@ export async function batchUpdateAttendanceMethods(req: Request, res: Response) 
 
     if (!Array.isArray(methods)) return res.status(400).json({ success: false, error: 'methods array required.' });
 
-    const rows = methods.map(m => ({
+    const rows = methods.map((m) => ({
       institution_id: institutionId,
       method_key: m.method_key,
       is_enabled: m.is_enabled,
@@ -1407,14 +1449,20 @@ export async function deviceAttendancePush(req: Request, res: Response) {
         .select('id')
         .eq('fingerprint_id', identifier_value)
         .maybeSingle();
-      if (student) { studentId = student.id; matched = true; }
+      if (student) {
+        studentId = student.id;
+        matched = true;
+      }
     } else if (identifier_type === 'rfid_card') {
       const { data: student } = await supabaseAdmin
         .from('students')
         .select('id')
         .eq('rfid_card_id', identifier_value)
         .maybeSingle();
-      if (student) { studentId = student.id; matched = true; }
+      if (student) {
+        studentId = student.id;
+        matched = true;
+      }
     }
 
     // Log the raw attempt
@@ -1449,23 +1497,18 @@ export async function deviceAttendancePush(req: Request, res: Response) {
         sessionQuery = sessionQuery.eq('department_id', device.department_id);
       }
 
-      const { data: session } = await sessionQuery
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: session } = await sessionQuery.order('created_at', { ascending: false }).limit(1).maybeSingle();
 
       if (session) {
-        const { error: attErr } = await supabaseAdmin
-          .from('attendance')
-          .insert({
-            institution_id: institutionId,
-            student_id: studentId,
-            session_id: session.id,
-            date: today,
-            status: 'present',
-            method: identifier_type === 'rfid_card' ? 'rfid' : 'biometric',
-            device_id: device.id
-          });
+        const { error: attErr } = await supabaseAdmin.from('attendance').insert({
+          institution_id: institutionId,
+          student_id: studentId,
+          session_id: session.id,
+          date: today,
+          status: 'present',
+          method: identifier_type === 'rfid_card' ? 'rfid' : 'biometric',
+          device_id: device.id
+        });
 
         // Ignore duplicate errors (23505 = unique constraint)
         if (attErr && attErr.code !== '23505') {
@@ -1513,10 +1556,7 @@ export async function exportCiaMarks(req: Request, res: Response) {
       .eq('department_id', department_id)
       .eq('semester', semester || 1);
 
-    const { data: allMarks } = await supabaseAdmin
-      .from('cia_marks')
-      .select('*')
-      .in('assessment_id', assessmentIds);
+    const { data: allMarks } = await supabaseAdmin.from('cia_marks').select('*').in('assessment_id', assessmentIds);
 
     const marksMap: Record<string, Record<string, any>> = {};
     (allMarks || []).forEach((m: any) => {
@@ -1528,7 +1568,7 @@ export async function exportCiaMarks(req: Request, res: Response) {
       const row: Record<string, any> = {
         roll_number: s.roll_number,
         student_name: s.users?.full_name || '',
-        semester: s.semester,
+        semester: s.semester
       };
       let totalObtained = 0;
       let totalMax = 0;
@@ -1545,10 +1585,18 @@ export async function exportCiaMarks(req: Request, res: Response) {
     });
 
     if (format === 'csv') {
-      const headers = ['roll_number', 'student_name', 'semester', ...filteredAssessments.map((a: any) => a.name || a.assessment_type), 'total_marks', 'max_marks', 'percentage'];
+      const headers = [
+        'roll_number',
+        'student_name',
+        'semester',
+        ...filteredAssessments.map((a: any) => a.name || a.assessment_type),
+        'total_marks',
+        'max_marks',
+        'percentage'
+      ];
       const csvRows = [headers.join(',')];
       exportRows.forEach((row: any) => {
-        csvRows.push(headers.map(h => `"${row[h] ?? ''}"`).join(','));
+        csvRows.push(headers.map((h) => `"${row[h] ?? ''}"`).join(','));
       });
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader('Content-Disposition', `attachment; filename=CIA_Marks_${department_id}_${semester || 'all'}.csv`);
@@ -1563,7 +1611,7 @@ export async function exportCiaMarks(req: Request, res: Response) {
       subject: subject || 'all',
       total_students: exportRows.length,
       total_assessments: filteredAssessments.length,
-      data: exportRows,
+      data: exportRows
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -1588,16 +1636,13 @@ export async function getStudentAttendance(req: Request, res: Response) {
     const isSchool = student.institutions?.type === 'school';
 
     if (isSchool) {
-      const { data: logs, error } = await supabaseAdmin
-        .from('school_attendance')
-        .select('*')
-        .eq('student_id', id);
+      const { data: logs, error } = await supabaseAdmin.from('school_attendance').select('*').eq('student_id', id);
 
       if (error) return res.status(500).json({ success: false, error: error.message });
 
       const total = logs.length;
       let presentCount = 0;
-      logs.forEach(l => {
+      logs.forEach((l) => {
         if (l.status === 'Present' || l.status === 'Leave') presentCount += 1;
         else if (l.status === 'Half-Day') presentCount += 0.5;
       });
@@ -1605,7 +1650,7 @@ export async function getStudentAttendance(req: Request, res: Response) {
 
       // Group by month to create monthly summary
       const monthlyMap: Record<string, { total: number; present: number }> = {};
-      logs.forEach(log => {
+      logs.forEach((log) => {
         const [yearStr, monthStr, dayStr] = log.date.split('-');
         const dateObj = new Date(parseInt(yearStr), parseInt(monthStr) - 1, parseInt(dayStr));
         const monthName = dateObj.toLocaleString('en-US', { month: 'long', year: 'numeric' });
@@ -1626,7 +1671,7 @@ export async function getStudentAttendance(req: Request, res: Response) {
         present: counts.present
       }));
 
-      const heatmap = logs.map(l => ({
+      const heatmap = logs.map((l) => ({
         date: l.date,
         status: l.status
       }));
@@ -1654,12 +1699,12 @@ export async function getStudentAttendance(req: Request, res: Response) {
     if (error) return res.status(500).json({ success: false, error: error.message });
 
     const total = logs.length;
-    const present = logs.filter(l => l.status === 'present' || l.status === 'late').length;
+    const present = logs.filter((l) => l.status === 'present' || l.status === 'late').length;
     const percentage = total > 0 ? Math.round((present / total) * 100) : 100;
 
     // Subject breakdown
     const subjectsMap: Record<string, { total: number; present: number }> = {};
-    logs.forEach(log => {
+    logs.forEach((log) => {
       const sub = log.attendance_sessions?.subject || 'General';
       if (!subjectsMap[sub]) subjectsMap[sub] = { total: 0, present: 0 };
       subjectsMap[sub].total++;
@@ -1674,7 +1719,7 @@ export async function getStudentAttendance(req: Request, res: Response) {
     }));
 
     // Heatmap formatting
-    const heatmap = logs.map(l => ({
+    const heatmap = logs.map((l) => ({
       date: l.date,
       status: l.status
     }));
@@ -1696,7 +1741,6 @@ export async function getStudentAttendance(req: Request, res: Response) {
     return res.status(500).json({ success: false, error: 'Internal fetch failure.' });
   }
 }
-
 
 export async function getAttendanceReport(req: Request, res: Response) {
   try {
@@ -1745,7 +1789,9 @@ export async function submitRegularize(req: Request, res: Response) {
       .gte('created_at', startOfMonth.toISOString());
 
     if (count !== null && count >= 3) {
-      return res.status(400).json({ success: false, error: 'Maximum limit of 3 attendance regularizations per month reached.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'Maximum limit of 3 attendance regularizations per month reached.' });
     }
 
     const { data, error } = await supabaseAdmin
@@ -1796,16 +1842,14 @@ export async function approveRegularize(req: Request, res: Response) {
 
     // If approved, update student attendance state to present
     if (status === 'Approved') {
-      await supabaseAdmin
-        .from('attendance')
-        .insert({
-          institution_id: reg.institution_id,
-          student_id: reg.student_id,
-          date: reg.date,
-          status: 'present',
-          marked_by: req.user?.id,
-          method: 'manual'
-        });
+      await supabaseAdmin.from('attendance').insert({
+        institution_id: reg.institution_id,
+        student_id: reg.student_id,
+        date: reg.date,
+        status: 'present',
+        marked_by: req.user?.id,
+        method: 'manual'
+      });
     }
 
     return res.status(200).json({ success: true, data: updatedReg });
@@ -1821,9 +1865,7 @@ export async function approveRegularize(req: Request, res: Response) {
 export async function getStudents(req: Request, res: Response) {
   try {
     const { department_id, batch } = req.query;
-    let query = supabaseAdmin
-      .from('students')
-      .select('*, users(*)');
+    let query = supabaseAdmin.from('students').select('*, users(*)');
 
     if (req.user?.institution_id) {
       query = query.eq('institution_id', req.user.institution_id);
@@ -1863,9 +1905,7 @@ export async function getFacultyStudents(req: Request, res: Response) {
       return res.status(500).json({ success: false, error: staffErr.message });
     }
 
-    let query = supabaseAdmin
-      .from('students')
-      .select('*, users(*)');
+    let query = supabaseAdmin.from('students').select('*, users(*)');
 
     if (instId) {
       query = query.eq('institution_id', instId);
@@ -1903,7 +1943,10 @@ export async function createStudent(req: Request, res: Response) {
       .select()
       .single();
 
-    if (uErr || !user) return res.status(500).json({ success: false, error: uErr?.message || 'Failed to create student user login context.' });
+    if (uErr || !user)
+      return res
+        .status(500)
+        .json({ success: false, error: uErr?.message || 'Failed to create student user login context.' });
 
     // Create student record linked to user
     const { data: student, error: sErr } = await supabaseAdmin
@@ -1958,11 +2001,7 @@ export async function getStudentMe(req: Request, res: Response) {
 export async function getStudentById(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { data, error } = await supabaseAdmin
-      .from('students')
-      .select('*, users(*)')
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabaseAdmin.from('students').select('*, users(*)').eq('id', id).single();
 
     if (error || !data) return res.status(404).json({ success: false, error: 'Student details not found.' });
     return res.status(200).json({ success: true, student: data });
@@ -1974,26 +2013,22 @@ export async function getStudentById(req: Request, res: Response) {
 export async function updateStudent(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { data: student, error: getErr } = await supabaseAdmin.from('students').select('user_id').eq('id', id).single();
+    const { data: student, error: getErr } = await supabaseAdmin
+      .from('students')
+      .select('user_id')
+      .eq('id', id)
+      .single();
     if (getErr || !student) return res.status(404).json({ success: false, error: 'Student record not found.' });
 
     const { name, email, ...studentFields } = req.body;
 
     // Update User record
     if (name || email) {
-      await supabaseAdmin
-        .from('users')
-        .update({ name, email })
-        .eq('id', student.user_id);
+      await supabaseAdmin.from('users').update({ name, email }).eq('id', student.user_id);
     }
 
     // Update Student details
-    const { data, error } = await supabaseAdmin
-      .from('students')
-      .update(studentFields)
-      .eq('id', id)
-      .select()
-      .single();
+    const { data, error } = await supabaseAdmin.from('students').update(studentFields).eq('id', id).select().single();
 
     if (error) return res.status(500).json({ success: false, error: error.message });
 
@@ -2006,14 +2041,15 @@ export async function updateStudent(req: Request, res: Response) {
 export async function deleteStudent(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { data: student, error: getErr } = await supabaseAdmin.from('students').select('user_id').eq('id', id).single();
+    const { data: student, error: getErr } = await supabaseAdmin
+      .from('students')
+      .select('user_id')
+      .eq('id', id)
+      .single();
     if (getErr || !student) return res.status(404).json({ success: false, error: 'Student record not found.' });
 
     // Cascades delete from user context
-    const { error } = await supabaseAdmin
-      .from('users')
-      .delete()
-      .eq('id', student.user_id);
+    const { error } = await supabaseAdmin.from('users').delete().eq('id', student.user_id);
 
     if (error) return res.status(500).json({ success: false, error: error.message });
 
@@ -2026,7 +2062,8 @@ export async function deleteStudent(req: Request, res: Response) {
 export async function importStudents(req: Request, res: Response) {
   try {
     const { records } = req.body; // Expects array of student objects
-    if (!Array.isArray(records)) return res.status(400).json({ success: false, error: 'Payload records must be an array.' });
+    if (!Array.isArray(records))
+      return res.status(400).json({ success: false, error: 'Payload records must be an array.' });
 
     const imported = [];
     for (const rec of records) {
@@ -2086,30 +2123,36 @@ export async function getTimetable(req: Request, res: Response) {
     // Try class_section_id first (school student view)
     if (isUUID) {
       const { data: asClassSection } = await supabaseAdmin
-        .from('timetable').select('*')
+        .from('timetable')
+        .select('*')
         .eq('institution_id', institution_id)
         .eq('class_section_id', departmentId)
-        .order('day_of_week').order('time_slot');
+        .order('day_of_week')
+        .order('time_slot');
       if (asClassSection && asClassSection.length > 0) {
         return res.status(200).json({ success: true, timetable: asClassSection });
       }
 
       // Try teacher_id (teacher view)
       const { data: asTeacher } = await supabaseAdmin
-        .from('timetable').select('*')
+        .from('timetable')
+        .select('*')
         .eq('institution_id', institution_id)
         .eq('teacher_id', departmentId)
-        .order('day_of_week').order('time_slot');
+        .order('day_of_week')
+        .order('time_slot');
       if (asTeacher && asTeacher.length > 0) {
         return res.status(200).json({ success: true, timetable: asTeacher });
       }
 
       // Try department_id
       const { data: asDept } = await supabaseAdmin
-        .from('timetable').select('*')
+        .from('timetable')
+        .select('*')
         .eq('institution_id', institution_id)
         .eq('department_id', departmentId)
-        .order('day_of_week').order('time_slot');
+        .order('day_of_week')
+        .order('time_slot');
       if (asDept && asDept.length > 0) {
         return res.status(200).json({ success: true, timetable: asDept });
       }
@@ -2117,17 +2160,21 @@ export async function getTimetable(req: Request, res: Response) {
       // Fallback: return ALL timetable entries for this institution
       // (useful when class_section_id column doesn't exist yet)
       const { data: allEntries } = await supabaseAdmin
-        .from('timetable').select('*')
+        .from('timetable')
+        .select('*')
         .eq('institution_id', institution_id)
-        .order('day_of_week').order('time_slot');
+        .order('day_of_week')
+        .order('time_slot');
       return res.status(200).json({ success: true, timetable: allEntries || [] });
     }
 
     // Non-UUID: return all entries
     const { data, error } = await supabaseAdmin
-      .from('timetable').select('*')
+      .from('timetable')
+      .select('*')
       .eq('institution_id', institution_id)
-      .order('day_of_week').order('time_slot');
+      .order('day_of_week')
+      .order('time_slot');
     if (error) return res.status(500).json({ success: false, error: error.message });
     return res.status(200).json({ success: true, timetable: data || [] });
   } catch (err) {
@@ -2150,7 +2197,10 @@ export async function addTimetableBlock(req: Request, res: Response) {
       .eq('room', block.room)
       .maybeSingle();
 
-    if (roomConflict) return res.status(409).json({ success: false, error: `Clash: Room ${block.room} is already booked for ${roomConflict.subject}.` });
+    if (roomConflict)
+      return res
+        .status(409)
+        .json({ success: false, error: `Clash: Room ${block.room} is already booked for ${roomConflict.subject}.` });
 
     // Clash Detection 2: Teacher conflict
     const { data: teacherConflict } = await supabaseAdmin
@@ -2161,7 +2211,13 @@ export async function addTimetableBlock(req: Request, res: Response) {
       .eq('teacher_id', block.teacher_id)
       .maybeSingle();
 
-    if (teacherConflict) return res.status(409).json({ success: false, error: `Clash: Lecturer is already assigned to ${teacherConflict.subject} during this time.` });
+    if (teacherConflict)
+      return res
+        .status(409)
+        .json({
+          success: false,
+          error: `Clash: Lecturer is already assigned to ${teacherConflict.subject} during this time.`
+        });
 
     const insertData: Record<string, any> = {
       institution_id: req.user?.institution_id,
@@ -2169,15 +2225,11 @@ export async function addTimetableBlock(req: Request, res: Response) {
       time_slot: block.time_slot,
       subject: block.subject,
       teacher_id: block.teacher_id,
-      room: block.room,
+      room: block.room
     };
     if (block.department_id) insertData.department_id = block.department_id;
 
-    const { data, error } = await supabaseAdmin
-      .from('timetable')
-      .insert(insertData)
-      .select()
-      .single();
+    const { data, error } = await supabaseAdmin.from('timetable').insert(insertData).select().single();
 
     if (error) return res.status(500).json({ success: false, error: error.message });
 
@@ -2190,20 +2242,20 @@ export async function addTimetableBlock(req: Request, res: Response) {
 export async function updateTimetableBlock(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    
+
     // Fetch existing block to merge details for clash detection
     const { data: existingBlock, error: fetchErr } = await supabaseAdmin
       .from('timetable')
       .select('*')
       .eq('id', id)
       .single();
-      
+
     if (fetchErr || !existingBlock) {
       return res.status(404).json({ success: false, error: 'Timetable block not found.' });
     }
-    
+
     const merged = { ...existingBlock, ...req.body };
-    
+
     // Clash Detection 1: Room conflict
     if (merged.room) {
       const { data: roomConflict } = await supabaseAdmin
@@ -2216,7 +2268,9 @@ export async function updateTimetableBlock(req: Request, res: Response) {
         .maybeSingle();
 
       if (roomConflict) {
-        return res.status(409).json({ success: false, error: `Clash: Room ${merged.room} is already booked for ${roomConflict.subject}.` });
+        return res
+          .status(409)
+          .json({ success: false, error: `Clash: Room ${merged.room} is already booked for ${roomConflict.subject}.` });
       }
     }
 
@@ -2232,16 +2286,16 @@ export async function updateTimetableBlock(req: Request, res: Response) {
         .maybeSingle();
 
       if (teacherConflict) {
-        return res.status(409).json({ success: false, error: `Clash: Lecturer is already assigned to ${teacherConflict.subject} during this time.` });
+        return res
+          .status(409)
+          .json({
+            success: false,
+            error: `Clash: Lecturer is already assigned to ${teacherConflict.subject} during this time.`
+          });
       }
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('timetable')
-      .update(req.body)
-      .eq('id', id)
-      .select()
-      .single();
+    const { data, error } = await supabaseAdmin.from('timetable').update(req.body).eq('id', id).select().single();
 
     if (error) return res.status(500).json({ success: false, error: error.message });
     return res.status(200).json({ success: true, data });
@@ -2272,9 +2326,7 @@ export async function getStudentTimetable(req: Request, res: Response) {
 
     if (stdErr || !student) return res.status(404).json({ success: false, error: 'Student mapping details missing.' });
 
-    let query = supabaseAdmin
-      .from('timetable')
-      .select('*, staff(*, users(*))');
+    let query = supabaseAdmin.from('timetable').select('*, staff(*, users(*))');
 
     if ((student.institutions as any)?.type === 'school') {
       if (!student.class_section_id) {
@@ -2373,7 +2425,7 @@ export async function initiatePayment(req: Request, res: Response) {
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
-      key_id: process.env.RAZORPAY_KEY_ID,
+      key_id: process.env.RAZORPAY_KEY_ID
     });
   } catch (err) {
     logger.error('initiatePayment error:', err);
@@ -2385,16 +2437,84 @@ export async function verifyPayment(req: Request, res: Response) {
   try {
     const parse = feePaymentVerifySchema.safeParse(req.body);
     if (!parse.success) return res.status(400).json({ success: false, error: parse.error.errors[0].message });
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, student_id, fee_structure_id, amount_paid } = parse.data;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, student_id, fee_structure_id, amount_paid } =
+      parse.data;
 
-    const secret = process.env.RAZORPAY_KEY_SECRET;
-    if (secret && !isMockOrderId(razorpay_order_id)) {
+    // 1. IDOR Check: Ensure student_id belongs to the calling user / parent
+    if (req.user?.role === 'Student') {
+      const { data: studentRecord } = await supabaseAdmin
+        .from('students')
+        .select('id')
+        .eq('user_id', req.user.id)
+        .maybeSingle();
+
+      if (!studentRecord || studentRecord.id !== student_id) {
+        return res
+          .status(403)
+          .json({ success: false, error: 'Forbidden: You can only verify payments for your own student record.' });
+      }
+    } else if (req.user?.role === 'Parent') {
+      const linked = await resolveParentStudent(req.user.id, student_id);
+      if (!linked) {
+        return res
+          .status(403)
+          .json({ success: false, error: 'Forbidden: Selected student is not linked to your parent account.' });
+      }
+    }
+
+    // 2. Idempotency Check: Reject replayed transaction IDs
+    const { data: existingPayment } = await supabaseAdmin
+      .from('fee_payments')
+      .select('id')
+      .eq('transaction_id', razorpay_payment_id)
+      .maybeSingle();
+
+    if (existingPayment) {
+      return res.status(409).json({ success: false, error: 'Duplicate transaction: Payment already recorded.' });
+    }
+
+    // 3. Signature & Amount Verification
+    const razorpay = getRazorpayClient();
+    if (razorpay) {
+      const secret = process.env.RAZORPAY_KEY_SECRET;
+      if (!secret) {
+        return res.status(500).json({ success: false, error: 'Server configuration error: Razorpay secret missing.' });
+      }
+
+      // Always verify signature when Razorpay client is active (client-supplied order_mock_ cannot bypass!)
       const generatedSignature = crypto
         .createHmac('sha256', secret)
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
         .digest('hex');
+
       if (generatedSignature !== razorpay_signature) {
         return res.status(400).json({ success: false, error: 'Payment signature verification failed.' });
+      }
+
+      // Fetch payment from Razorpay API and cross-check status, order_id, and captured amount
+      try {
+        const payment = await razorpay.payments.fetch(razorpay_payment_id);
+        if (!payment || payment.status !== 'captured') {
+          return res.status(400).json({ success: false, error: 'Payment is not captured.' });
+        }
+        if (payment.order_id && payment.order_id !== razorpay_order_id) {
+          return res.status(400).json({ success: false, error: 'Razorpay order ID mismatch.' });
+        }
+        const capturedAmountPaise = Number(payment.amount);
+        const expectedPaise = Math.round(amount_paid * 100);
+        if (capturedAmountPaise !== expectedPaise) {
+          return res
+            .status(400)
+            .json({ success: false, error: 'Payment amount mismatch between client claim and Razorpay.' });
+        }
+      } catch (rzpErr) {
+        logger.error('Razorpay payment fetch error in verifyPayment:', rzpErr);
+        return res.status(400).json({ success: false, error: 'Failed to verify payment with Razorpay.' });
+      }
+    } else {
+      // Offline / Mock mode (Razorpay not configured on server)
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ success: false, error: 'Payment gateway configuration error.' });
       }
     }
 
@@ -2421,10 +2541,7 @@ export async function verifyPayment(req: Request, res: Response) {
         const pdfBuffer = await generateFeeReceiptPDF(data);
         const fileName = `receipts/${razorpay_payment_id}.pdf`;
         const receiptUrl = await uploadReportToSupabase(pdfBuffer, fileName);
-        await supabaseAdmin
-          .from('fee_payments')
-          .update({ receipt_url: receiptUrl })
-          .eq('id', data.id);
+        await supabaseAdmin.from('fee_payments').update({ receipt_url: receiptUrl }).eq('id', data.id);
       } catch (pdfErr) {
         logger.error('Failed generating payment receipt:', pdfErr);
       }
@@ -2441,7 +2558,7 @@ const manualFeePaymentSchema = z.object({
   student_id: z.string().uuid({ message: 'Valid student ID is required' }),
   amount: z.number().positive({ message: 'Amount must be positive' }),
   payment_method: z.enum(['bank_transfer', 'upi'], { required_error: 'Valid payment method is required' }),
-  reference_number: z.string().min(3, { message: 'Reference number/UTR ID is required' }),
+  reference_number: z.string().min(3, { message: 'Reference number/UTR ID is required' })
 });
 
 export async function submitManualFeePayment(req: Request, res: Response) {
@@ -2491,9 +2608,7 @@ export async function submitManualFeePayment(req: Request, res: Response) {
 export async function getStudentFees(req: Request, res: Response) {
   try {
     const { studentId } = req.params;
-    const { data: structures, error: sErr } = await supabaseAdmin
-      .from('fee_structures')
-      .select('*');
+    const { data: structures, error: sErr } = await supabaseAdmin.from('fee_structures').select('*');
 
     const { data: payments, error: pErr } = await supabaseAdmin
       .from('fee_payments')
@@ -2515,9 +2630,7 @@ export async function getStudentFees(req: Request, res: Response) {
 
 export async function getFeesReport(req: Request, res: Response) {
   try {
-    const { data: payments, error } = await supabaseAdmin
-      .from('fee_payments')
-      .select('*, students(name, roll_number)');
+    const { data: payments, error } = await supabaseAdmin.from('fee_payments').select('*, students(name, roll_number)');
 
     if (error) return res.status(500).json({ success: false, error: error.message });
 
@@ -2565,9 +2678,7 @@ export async function triggerFeeReminders(req: Request, res: Response) {
   try {
     const { student_ids, fee_structure_id, channel = 'whatsapp' } = req.body;
 
-    let query = supabaseAdmin
-      .from('fee_structures')
-      .select('id, name, amount, due_date');
+    let query = supabaseAdmin.from('fee_structures').select('id, name, amount, due_date');
 
     if (fee_structure_id) {
       query = query.eq('id', fee_structure_id);
@@ -2582,9 +2693,7 @@ export async function triggerFeeReminders(req: Request, res: Response) {
     const reminders: FeeReminderEntry[] = [];
 
     for (const fee of feeStructures) {
-      let studentQuery = supabaseAdmin
-        .from('students')
-        .select('id, user_id, users(name, phone)');
+      let studentQuery = supabaseAdmin.from('students').select('id, user_id, users(name, phone)');
 
       if (student_ids && student_ids.length > 0) {
         studentQuery = studentQuery.in('id', student_ids);
@@ -2599,7 +2708,7 @@ export async function triggerFeeReminders(req: Request, res: Response) {
         .eq('fee_structure_id', fee.id)
         .eq('status', 'Completed');
 
-      const paidIds = new Set((paidStudents || []).map(p => p.student_id));
+      const paidIds = new Set((paidStudents || []).map((p) => p.student_id));
 
       for (const student of students) {
         if (paidIds.has(student.id)) continue;
@@ -2620,7 +2729,7 @@ export async function triggerFeeReminders(req: Request, res: Response) {
           fee_name: fee.name,
           amount: fee.amount,
           due_date: fee.due_date,
-          days_overdue: daysOverdue,
+          days_overdue: daysOverdue
         });
       }
     }
@@ -2629,7 +2738,7 @@ export async function triggerFeeReminders(req: Request, res: Response) {
 
     try {
       for (const detail of results.details) {
-        const entry = reminders.find(r => r.student_id === detail.student_id);
+        const entry = reminders.find((r) => r.student_id === detail.student_id);
         if (!entry) continue;
 
         await supabaseAdmin.from('fee_reminders').insert({
@@ -2638,7 +2747,7 @@ export async function triggerFeeReminders(req: Request, res: Response) {
           amount: entry.amount,
           channel,
           status: detail.status,
-          sent_at: new Date().toISOString(),
+          sent_at: new Date().toISOString()
         });
       }
     } catch (logErr: any) {
@@ -2649,7 +2758,7 @@ export async function triggerFeeReminders(req: Request, res: Response) {
       success: true,
       sent: results.sent,
       failed: results.failed,
-      details: results.details,
+      details: results.details
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message || 'Failed to trigger fee reminders.' });
@@ -2720,7 +2829,7 @@ export async function toggleAutoReminders(req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       enabled,
-      message: enabled ? 'Auto-reminders enabled. Daily 9 AM cron active.' : 'Auto-reminders disabled.',
+      message: enabled ? 'Auto-reminders enabled. Daily 9 AM cron active.' : 'Auto-reminders disabled.'
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message || 'Failed to toggle auto-reminders.' });
@@ -2742,7 +2851,7 @@ export async function getNotices(req: Request, res: Response) {
     if (error) return res.status(500).json({ success: false, error: error.message });
 
     // Map read state for active user
-    const noticeFeed = data.map(notice => {
+    const noticeFeed = data.map((notice) => {
       const isRead = notice.notice_reads?.some((r: any) => r.user_id === req.user?.id);
       return {
         ...notice,
@@ -2824,7 +2933,8 @@ export async function readNotice(req: Request, res: Response) {
       .select()
       .single();
 
-    if (error && error.code !== '23505') { // Ignore unique constraint violation (already read)
+    if (error && error.code !== '23505') {
+      // Ignore unique constraint violation (already read)
       return res.status(500).json({ success: false, error: error.message });
     }
 
@@ -2856,9 +2966,7 @@ export async function getNoticeAnalytics(req: Request, res: Response) {
 
 export async function getExams(req: Request, res: Response) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('exams')
-      .select('*, departments(name)');
+    const { data, error } = await supabaseAdmin.from('exams').select('*, departments(name)');
 
     if (error) return res.status(500).json({ success: false, error: error.message });
     return res.status(200).json({ success: true, exams: data });
@@ -2901,10 +3009,9 @@ export async function enterResults(req: Request, res: Response) {
     if (!parse.success) return res.status(400).json({ success: false, error: parse.error.errors[0].message });
     const { exam_id, subject, is_grade_only, records } = parse.data;
 
-    const grades = records.map(rec => {
-      const grade = is_grade_only && rec.grade
-        ? rec.grade
-        : calculateGrade(rec.marks_obtained || 0, rec.max_marks || 100);
+    const grades = records.map((rec) => {
+      const grade =
+        is_grade_only && rec.grade ? rec.grade : calculateGrade(rec.marks_obtained || 0, rec.max_marks || 100);
 
       return {
         institution_id: req.user?.institution_id,
@@ -2967,7 +3074,9 @@ export async function getStudentMarksheet(req: Request, res: Response) {
     if (req.user) {
       const userRole = req.user.role;
       const userId = req.user.id;
-      const isStaff = ['Teacher', 'Staff', 'Admin', 'SuperAdmin', 'HOD', 'Principal', 'Admissions Officer'].includes(userRole);
+      const isStaff = ['Teacher', 'Staff', 'Admin', 'SuperAdmin', 'HOD', 'Principal', 'Admissions Officer'].includes(
+        userRole
+      );
 
       if (!isStaff) {
         if (userRole === 'Student') {
@@ -2978,7 +3087,9 @@ export async function getStudentMarksheet(req: Request, res: Response) {
             .maybeSingle();
 
           if (!std || (std.id !== studentId && std.user_id !== userId && userId !== studentId)) {
-            return res.status(403).json({ success: false, error: 'Access denied. You can only view your own marksheet.' });
+            return res
+              .status(403)
+              .json({ success: false, error: 'Access denied. You can only view your own marksheet.' });
           }
         } else if (userRole === 'Parent') {
           const { data: link } = await supabaseAdmin
@@ -2989,7 +3100,9 @@ export async function getStudentMarksheet(req: Request, res: Response) {
             .maybeSingle();
 
           if (!link) {
-            return res.status(403).json({ success: false, error: 'Access denied. You can only view marksheets for your linked child.' });
+            return res
+              .status(403)
+              .json({ success: false, error: 'Access denied. You can only view marksheets for your linked child.' });
           }
         } else {
           return res.status(403).json({ success: false, error: 'Unauthorized to view student marksheets.' });
@@ -3021,7 +3134,9 @@ export async function getMarksheetMetadata(req: Request, res: Response) {
     if (req.user) {
       const userRole = req.user.role;
       const userId = req.user.id;
-      const isStaff = ['Teacher', 'Staff', 'Admin', 'SuperAdmin', 'HOD', 'Principal', 'Admissions Officer'].includes(userRole);
+      const isStaff = ['Teacher', 'Staff', 'Admin', 'SuperAdmin', 'HOD', 'Principal', 'Admissions Officer'].includes(
+        userRole
+      );
 
       if (!isStaff) {
         if (userRole === 'Student') {
@@ -3032,7 +3147,9 @@ export async function getMarksheetMetadata(req: Request, res: Response) {
             .maybeSingle();
 
           if (!std || (std.id !== studentId && std.user_id !== userId && userId !== studentId)) {
-            return res.status(403).json({ success: false, error: 'Access denied. You can only view your own marksheet.' });
+            return res
+              .status(403)
+              .json({ success: false, error: 'Access denied. You can only view your own marksheet.' });
           }
         } else if (userRole === 'Parent') {
           const { data: link } = await supabaseAdmin
@@ -3043,7 +3160,9 @@ export async function getMarksheetMetadata(req: Request, res: Response) {
             .maybeSingle();
 
           if (!link) {
-            return res.status(403).json({ success: false, error: 'Access denied. You can only view marksheets for your linked child.' });
+            return res
+              .status(403)
+              .json({ success: false, error: 'Access denied. You can only view marksheets for your linked child.' });
           }
         } else {
           return res.status(403).json({ success: false, error: 'Unauthorized to view student marksheets.' });
@@ -3130,7 +3249,9 @@ export async function generateCard(req: Request, res: Response) {
 
     // Enforce student self-only view authorization
     if (req.user?.role === 'Student' && student.user_id !== req.user.id) {
-      return res.status(403).json({ success: false, error: 'Access Denied. You are only authorized to generate your own ID card.' });
+      return res
+        .status(403)
+        .json({ success: false, error: 'Access Denied. You are only authorized to generate your own ID card.' });
     }
 
     // Stream PDF if requested explicitly
@@ -3152,34 +3273,35 @@ export async function generateCard(req: Request, res: Response) {
       doc.rect(0, 0, 240, 65).fill('#6C2BD9');
 
       // Header text
-      doc.fillColor('#FFFFFF')
-         .fontSize(9)
-         .font('Helvetica-Bold')
-         .text('SIET CAMPUS TELEMETRY', 10, 15, { align: 'center', width: 220 });
-      doc.fontSize(8)
-         .font('Helvetica')
-         .fillColor('#C4B5FD')
-         .text('DIGITAL STUDENT IDENTITY', 10, 32, { align: 'center', width: 220 });
+      doc
+        .fillColor('#FFFFFF')
+        .fontSize(9)
+        .font('Helvetica-Bold')
+        .text('SIET CAMPUS TELEMETRY', 10, 15, { align: 'center', width: 220 });
+      doc
+        .fontSize(8)
+        .font('Helvetica')
+        .fillColor('#C4B5FD')
+        .text('DIGITAL STUDENT IDENTITY', 10, 32, { align: 'center', width: 220 });
 
       // Photo frame placeholder
       doc.rect(75, 85, 90, 110).lineWidth(2).stroke('#8B5CF6');
-      doc.fillColor('#C4B5FD')
-         .fontSize(8)
-         .text('DIGITAL SECURE', 75, 125, { align: 'center', width: 90 });
-      doc.fontSize(7)
-         .text('BIOMETRIC ID', 75, 140, { align: 'center', width: 90 });
+      doc.fillColor('#C4B5FD').fontSize(8).text('DIGITAL SECURE', 75, 125, { align: 'center', width: 90 });
+      doc.fontSize(7).text('BIOMETRIC ID', 75, 140, { align: 'center', width: 90 });
 
       // Student metadata
       const deptName = student.departments?.name || 'Computer Science';
-      doc.fillColor('#FFFFFF')
-         .fontSize(11)
-         .font('Helvetica-Bold')
-         .text(student.name || 'Student Name', 10, 215, { align: 'center', width: 220 });
+      doc
+        .fillColor('#FFFFFF')
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .text(student.name || 'Student Name', 10, 215, { align: 'center', width: 220 });
 
-      doc.fillColor('#C4B5FD')
-         .fontSize(8)
-         .font('Helvetica')
-         .text(`Roll Number: ${student.roll_number || 'N/A'}`, 10, 235, { align: 'center', width: 220 });
+      doc
+        .fillColor('#C4B5FD')
+        .fontSize(8)
+        .font('Helvetica')
+        .text(`Roll Number: ${student.roll_number || 'N/A'}`, 10, 235, { align: 'center', width: 220 });
       doc.text(`Department: ${deptName}`, 10, 248, { align: 'center', width: 220 });
       doc.text(`Validity: 2024 - 2028`, 10, 261, { align: 'center', width: 220 });
 
@@ -3191,10 +3313,11 @@ export async function generateCard(req: Request, res: Response) {
       }
 
       // Security verification string
-      doc.fillColor('#C4B5FD')
-         .fontSize(6)
-         .font('Courier')
-         .text(`* VERIFIED SYSTEM CODE: ${student.id} *`, 10, 318, { align: 'center', width: 220 });
+      doc
+        .fillColor('#C4B5FD')
+        .fontSize(6)
+        .font('Courier')
+        .text(`* VERIFIED SYSTEM CODE: ${student.id} *`, 10, 318, { align: 'center', width: 220 });
 
       doc.end();
       return;
@@ -3250,7 +3373,8 @@ export async function verifyCard(req: Request, res: Response) {
       .eq('id', studentId)
       .single();
 
-    if (error || !student) return res.status(404).json({ success: false, verified: false, error: 'Invalid identification barcode key.' });
+    if (error || !student)
+      return res.status(404).json({ success: false, verified: false, error: 'Invalid identification barcode key.' });
 
     const std = student as any;
     return res.status(200).json({
@@ -3331,7 +3455,8 @@ export async function getStudentHealthScore(req: Request, res: Response) {
       academic_score: 80,
       engagement_score: 70,
       factors: { low_attendance: true, pending_dues: true },
-      recommendation: 'Attendance is slightly deficient. Settle pending fee balance of ₹50,000 to improve financial standing.',
+      recommendation:
+        'Attendance is slightly deficient. Settle pending fee balance of ₹50,000 to improve financial standing.',
       calculated_at: new Date().toISOString()
     };
     return res.status(200).json({ success: true, healthScore: mockScore });
@@ -3361,7 +3486,8 @@ export async function getHealthScoresReport(req: Request, res: Response) {
         academic_score: 42,
         engagement_score: 60,
         factors: { low_attendance: true, non_payment: true, low_grades: true },
-        recommendation: 'Risk factor is critical due to severe academic drop and complete non-payment of semester dues. Immediate HOD contact and active counselor assignment is required.',
+        recommendation:
+          'Risk factor is critical due to severe academic drop and complete non-payment of semester dues. Immediate HOD contact and active counselor assignment is required.',
         students: { name: 'Priyansh Mehta', roll_number: 'CS23B1042', departments: { name: 'Computer Science' } },
         calculated_at: new Date().toISOString()
       },
@@ -3375,7 +3501,8 @@ export async function getHealthScoresReport(req: Request, res: Response) {
         academic_score: 60,
         engagement_score: 40,
         factors: { low_attendance: true, partial_payment: true },
-        recommendation: 'High risk detected. Low engagement score suggests student is inactive in events and library. Suggest peer tutoring and scheduling fee installment checks.',
+        recommendation:
+          'High risk detected. Low engagement score suggests student is inactive in events and library. Suggest peer tutoring and scheduling fee installment checks.',
         students: { name: 'Rohit Sharma', roll_number: 'EC23B2051', departments: { name: 'Electronics' } },
         calculated_at: new Date().toISOString()
       }
@@ -3393,18 +3520,15 @@ export async function calculateHealthScores(req: Request, res: Response) {
       studentIds = [studentId];
     } else {
       const { data: students } = await supabaseAdmin.from('students').select('id');
-      studentIds = (students || []).map(s => s.id);
+      studentIds = (students || []).map((s) => s.id);
     }
 
     for (const id of studentIds) {
       // Fetch attendance percentage
-      const { data: attendanceLogs } = await supabaseAdmin
-        .from('attendance')
-        .select('status')
-        .eq('student_id', id);
-      
+      const { data: attendanceLogs } = await supabaseAdmin.from('attendance').select('status').eq('student_id', id);
+
       const totalAtt = attendanceLogs?.length || 0;
-      const presentAtt = attendanceLogs?.filter(l => l.status === 'present' || l.status === 'late').length || 0;
+      const presentAtt = attendanceLogs?.filter((l) => l.status === 'present' || l.status === 'late').length || 0;
       const attPct = totalAtt > 0 ? (presentAtt / totalAtt) * 100 : 85; // Default fallback to 85%
 
       // Fetch outstanding tuition fees
@@ -3412,7 +3536,7 @@ export async function calculateHealthScores(req: Request, res: Response) {
         .from('fee_payments')
         .select('amount_paid, status, fee_structures(amount)')
         .eq('student_id', id);
-      
+
       let outstanding = 0;
       if (payments) {
         payments.forEach((p: any) => {
@@ -3427,11 +3551,11 @@ export async function calculateHealthScores(req: Request, res: Response) {
         .from('exam_results')
         .select('marks_obtained, max_marks')
         .eq('student_id', id);
-      
+
       let totalMarks = 0;
       let obtained = 0;
       if (results) {
-        results.forEach(r => {
+        results.forEach((r) => {
           totalMarks += Number(r.max_marks);
           obtained += Number(r.marks_obtained);
         });
@@ -3443,9 +3567,9 @@ export async function calculateHealthScores(req: Request, res: Response) {
         .from('event_registrations')
         .select('*', { count: 'exact', head: true })
         .eq('student_id', id);
-      
-      const engagementCount = (eventsCount || 0);
-      const engagementScore = Math.min(100, 40 + (engagementCount * 20));
+
+      const engagementCount = eventsCount || 0;
+      const engagementScore = Math.min(100, 40 + engagementCount * 20);
 
       // Map scores 0-100
       const attendance_score = Math.round(attPct);
@@ -3454,10 +3578,7 @@ export async function calculateHealthScores(req: Request, res: Response) {
 
       // Weighted average
       const score = Math.round(
-        (attendance_score * 0.3) +
-        (fee_score * 0.25) +
-        (academic_score * 0.25) +
-        (engagementScore * 0.2)
+        attendance_score * 0.3 + fee_score * 0.25 + academic_score * 0.25 + engagementScore * 0.2
       );
 
       let risk_level = 'low';
@@ -3498,7 +3619,9 @@ export async function calculateHealthScores(req: Request, res: Response) {
       await supabaseAdmin.from('students').update({ health_score: score, risk_level }).eq('id', id);
     }
 
-    return res.status(200).json({ success: true, message: `Health scores calculated for ${studentIds.length} students.` });
+    return res
+      .status(200)
+      .json({ success: true, message: `Health scores calculated for ${studentIds.length} students.` });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message || 'Health score calculation failure.' });
   }
@@ -3508,11 +3631,7 @@ export async function assignSubstitute(req: Request, res: Response) {
   try {
     const { timetable_id, substitute_id, date } = req.body;
 
-    const { data: block } = await supabaseAdmin
-      .from('timetable')
-      .select('teacher_id')
-      .eq('id', timetable_id)
-      .single();
+    const { data: block } = await supabaseAdmin.from('timetable').select('teacher_id').eq('id', timetable_id).single();
 
     if (!block) return res.status(404).json({ success: false, error: 'Scheduled slot block not found.' });
 
@@ -3540,9 +3659,7 @@ export async function getSubstitutes(req: Request, res: Response) {
     const institutionId = req.user?.institution_id;
     const { date } = req.query;
 
-    let query = supabaseAdmin
-      .from('substitute_assignments')
-      .select('*');
+    let query = supabaseAdmin.from('substitute_assignments').select('*');
 
     if (date) {
       query = query.eq('date', date as string);
@@ -3570,10 +3687,22 @@ export async function getVpDashboardMetrics(req: Request, res: Response) {
       { count: pendingAppraisalsCount },
       { data: summaryData }
     ] = await Promise.all([
-      supabaseAdmin.from('class_sections').select('id', { count: 'exact', head: true }).eq('institution_id', institutionId),
+      supabaseAdmin
+        .from('class_sections')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId),
       supabaseAdmin.from('timetable').select('id', { count: 'exact', head: true }).eq('institution_id', institutionId),
-      supabaseAdmin.from('performance_appraisals').select('id', { count: 'exact', head: true }).eq('institution_id', institutionId).in('status', ['pending', 'submitted']),
-      supabaseAdmin.from('daily_attendance_summary').select('total_present, total_students').eq('institution_id', institutionId).eq('date', todayStr).maybeSingle()
+      supabaseAdmin
+        .from('performance_appraisals')
+        .select('id', { count: 'exact', head: true })
+        .eq('institution_id', institutionId)
+        .in('status', ['pending', 'submitted']),
+      supabaseAdmin
+        .from('daily_attendance_summary')
+        .select('total_present, total_students')
+        .eq('institution_id', institutionId)
+        .eq('date', todayStr)
+        .maybeSingle()
     ]);
 
     let dailyAttendanceRate = 92;
@@ -3634,9 +3763,7 @@ export async function getEligibleScholarships(req: Request, res: Response) {
     if (error) throw error;
 
     // Analyze students matches
-    const { data: students } = await supabaseAdmin
-      .from('students')
-      .select('*, users(*)');
+    const { data: students } = await supabaseAdmin.from('students').select('*, users(*)');
 
     const eligibilityList: any[] = [];
 
@@ -3652,7 +3779,7 @@ export async function getEligibleScholarships(req: Request, res: Response) {
       const attendance = score?.attendance_score || 85;
       const marks = score?.academic_score || 78;
 
-      criteria?.forEach(c => {
+      criteria?.forEach((c) => {
         if (attendance >= Number(c.min_attendance) && marks >= Number(c.min_marks)) {
           eligibilityList.push({
             student_id: student.id,
@@ -3766,15 +3893,18 @@ export async function importAttendanceRecords(req: Request, res: Response) {
         // Insert attendance record (upsert to handle duplicates)
         const { data: attRecord, error: attErr } = await supabaseAdmin
           .from('attendance')
-          .upsert({
-            institution_id: institutionId,
-            student_id: student.id,
-            session_id: session.id,
-            date: rec.date,
-            status,
-            method: rec.method || 'imported',
-            marked_by: req.user?.id
-          }, { onConflict: 'student_id,session_id' })
+          .upsert(
+            {
+              institution_id: institutionId,
+              student_id: student.id,
+              session_id: session.id,
+              date: rec.date,
+              status,
+              method: rec.method || 'imported',
+              marked_by: req.user?.id
+            },
+            { onConflict: 'student_id,session_id' }
+          )
           .select()
           .single();
 
@@ -3810,13 +3940,9 @@ export async function importStudentProfiles(req: Request, res: Response) {
     }
 
     const institutionId = req.user?.institution_id;
-    
+
     // Fetch institution type
-    const { data: inst } = await supabaseAdmin
-      .from('institutions')
-      .select('type')
-      .eq('id', institutionId)
-      .single();
+    const { data: inst } = await supabaseAdmin.from('institutions').select('type').eq('id', institutionId).single();
     const isSchool = inst?.type === 'school';
 
     const imported: any[] = [];
@@ -4124,11 +4250,7 @@ export async function getFeeEscalationLogs(req: Request, res: Response) {
 // =========================================================================
 export async function getExamHalls(req: Request, res: Response) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('exam_halls')
-      .select('*')
-      .eq('is_active', true)
-      .order('hall_name');
+    const { data, error } = await supabaseAdmin.from('exam_halls').select('*').eq('is_active', true).order('hall_name');
     if (error) throw error;
     return res.status(200).json({ success: true, halls: data || [] });
   } catch (err: any) {
@@ -4150,7 +4272,7 @@ export async function createExamHall(req: Request, res: Response) {
         room_number,
         capacity: capacity || 30,
         building: building || '',
-        has_ac: has_ac || false,
+        has_ac: has_ac || false
       })
       .select()
       .single();
@@ -4175,7 +4297,7 @@ export async function getExamSeating(req: Request, res: Response) {
     const seating = (data || []).map((s: any) => ({
       ...s,
       student_name: s.students?.users?.full_name,
-      roll_number: s.students?.roll_number,
+      roll_number: s.students?.roll_number
     }));
     return res.status(200).json({ success: true, seating });
   } catch (err: any) {
@@ -4208,7 +4330,7 @@ export async function getLostFoundItems(req: Request, res: Response) {
     const items = (data || []).map((item: any) => ({
       ...item,
       reported_by_name: item.users?.full_name || 'Unknown',
-      claimed_by_name: item.users?.full_name || null,
+      claimed_by_name: item.users?.full_name || null
     }));
     return res.status(200).json({ success: true, items });
   } catch (err: any) {
@@ -4229,7 +4351,7 @@ export async function createLostFoundItem(req: Request, res: Response) {
         category: category || 'Other',
         description: description || '',
         location_found: location_found || '',
-        photo_url: photo_url || null,
+        photo_url: photo_url || null
       })
       .select()
       .single();
@@ -4260,7 +4382,7 @@ export async function generateParentOtp(req: Request, res: Response) {
     if (!phone || !purpose) return res.status(400).json({ success: false, error: 'phone and purpose required.' });
     const { data, error } = await supabaseAdmin.rpc('generate_parent_otp', {
       p_phone: phone,
-      p_purpose: purpose,
+      p_purpose: purpose
     });
     if (error) throw error;
     const otp = data?.[0]?.otp_code;
@@ -4275,11 +4397,12 @@ export async function generateParentOtp(req: Request, res: Response) {
 export async function verifyParentOtp(req: Request, res: Response) {
   try {
     const { phone, otp, purpose } = req.body;
-    if (!phone || !otp || !purpose) return res.status(400).json({ success: false, error: 'phone, otp, and purpose required.' });
+    if (!phone || !otp || !purpose)
+      return res.status(400).json({ success: false, error: 'phone, otp, and purpose required.' });
     const { data, error } = await supabaseAdmin.rpc('verify_parent_otp', {
       p_phone: phone,
       p_otp: otp,
-      p_purpose: purpose,
+      p_purpose: purpose
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Verification failed' });
@@ -4291,10 +4414,11 @@ export async function verifyParentOtp(req: Request, res: Response) {
 export async function linkParentToChild(req: Request, res: Response) {
   try {
     const { roll_number, child_dob } = req.body;
-    if (!roll_number || !child_dob) return res.status(400).json({ success: false, error: 'roll_number and child_dob required.' });
+    if (!roll_number || !child_dob)
+      return res.status(400).json({ success: false, error: 'roll_number and child_dob required.' });
     const { data, error } = await supabaseAdmin.rpc('link_parent_to_child', {
       p_roll_number: roll_number,
-      p_child_dob: child_dob,
+      p_child_dob: child_dob
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Linking failed' });
@@ -4337,7 +4461,7 @@ export async function getAssignments(req: Request, res: Response) {
 
     const assignments = (data || []).map((a: any) => ({
       ...a,
-      created_by_name: a.users?.full_name || 'Unknown',
+      created_by_name: a.users?.full_name || 'Unknown'
     }));
     return res.status(200).json({ success: true, assignments });
   } catch (err: any) {
@@ -4347,7 +4471,18 @@ export async function getAssignments(req: Request, res: Response) {
 
 export async function createAssignment(req: Request, res: Response) {
   try {
-    const { title, description, subject, department_id, total_marks, deadline, allowed_file_types, max_file_size_mb, semester, batch_year } = req.body;
+    const {
+      title,
+      description,
+      subject,
+      department_id,
+      total_marks,
+      deadline,
+      allowed_file_types,
+      max_file_size_mb,
+      semester,
+      batch_year
+    } = req.body;
     if (!title || !department_id || !deadline) {
       return res.status(400).json({ success: false, error: 'title, department_id, and deadline required.' });
     }
@@ -4365,7 +4500,7 @@ export async function createAssignment(req: Request, res: Response) {
         allowed_file_types: allowed_file_types || ['pdf', 'jpg', 'jpeg', 'png'],
         max_file_size_mb: max_file_size_mb || 10,
         semester: semester || null,
-        batch_year: batch_year || '',
+        batch_year: batch_year || ''
       })
       .select()
       .single();
@@ -4388,7 +4523,7 @@ export async function getAssignmentSubmissions(req: Request, res: Response) {
     const submissions = (data || []).map((s: any) => ({
       ...s,
       student_name: s.students?.users?.full_name,
-      roll_number: s.students?.roll_number,
+      roll_number: s.students?.roll_number
     }));
     return res.status(200).json({ success: true, submissions });
   } catch (err: any) {
@@ -4407,7 +4542,7 @@ export async function gradeAssignment(req: Request, res: Response) {
         feedback: feedback || '',
         status: 'graded',
         graded_at: new Date().toISOString(),
-        graded_by: req.user?.id,
+        graded_by: req.user?.id
       })
       .eq('id', id)
       .select()
@@ -4442,7 +4577,7 @@ export async function getStudyMaterials(req: Request, res: Response) {
 
     const materials = (data || []).map((m: any) => ({
       ...m,
-      uploaded_by_name: m.users?.name || 'Unknown',
+      uploaded_by_name: m.users?.name || 'Unknown'
     }));
     return res.status(200).json({ success: true, materials });
   } catch (err: any) {
@@ -4453,7 +4588,19 @@ export async function getStudyMaterials(req: Request, res: Response) {
 export async function createStudyMaterial(req: Request, res: Response) {
   try {
     logger.info('createStudyMaterial called with body:', req.body);
-    const { title, description, subject, department_id, file_url, file_name, file_type, file_size_kb, category, semester, batch_year } = req.body;
+    const {
+      title,
+      description,
+      subject,
+      department_id,
+      file_url,
+      file_name,
+      file_type,
+      file_size_kb,
+      category,
+      semester,
+      batch_year
+    } = req.body;
     if (!title || !file_url) {
       return res.status(400).json({ success: false, error: 'title and file_url required.' });
     }
@@ -4472,7 +4619,7 @@ export async function createStudyMaterial(req: Request, res: Response) {
         file_size_kb: file_size_kb || 0,
         category: category || 'Notes',
         semester: semester || null,
-        batch_year: batch_year || '',
+        batch_year: batch_year || ''
       })
       .select()
       .single();
@@ -4523,7 +4670,7 @@ export async function getDepartmentLeaves(req: Request, res: Response) {
     const leaves = (data || []).map((l: any) => ({
       ...l,
       student_name: l.students?.users?.full_name,
-      roll_number: l.students?.roll_number,
+      roll_number: l.students?.roll_number
     }));
     return res.status(200).json({ success: true, leaves });
   } catch (err: any) {
@@ -4598,7 +4745,9 @@ export async function getMyBusETA(req: Request, res: Response) {
 async function resolveParentStudent(parentId: string, studentId?: string) {
   let query = supabaseAdmin
     .from('parent_student_links')
-    .select('student_id, verified, is_primary, students(*, departments(name), institutions(institute_type), users(full_name, name))')
+    .select(
+      'student_id, verified, is_primary, students(*, departments(name), institutions(institute_type), users(full_name, name))'
+    )
     .eq('parent_user_id', parentId)
     .eq('verified', true);
 
@@ -4724,8 +4873,8 @@ export async function getParentDailySummary(req: Request, res: Response) {
     let gateIn: string | null = null;
     let gateOut: string | null = null;
     if (gateEntries) {
-      const inEntry = gateEntries.find(e => e.direction === 'in');
-      const outEntry = [...gateEntries].reverse().find(e => e.direction === 'out');
+      const inEntry = gateEntries.find((e) => e.direction === 'in');
+      const outEntry = [...gateEntries].reverse().find((e) => e.direction === 'out');
       if (inEntry) {
         gateIn = new Date(inEntry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       }
@@ -4765,7 +4914,9 @@ export async function getParentDailySummary(req: Request, res: Response) {
       canteen_spend: canteenSpend,
       today_meals: meals,
       bus_boarded: !!busTracking,
-      bus_time: busTracking ? new Date(busTracking.boarded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
+      bus_time: busTracking
+        ? new Date(busTracking.boarded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : null,
       gate_in: gateIn,
       gate_out: gateOut,
       pending_fees: pendingFees,
@@ -4828,7 +4979,7 @@ export async function parentTopupWallet(req: Request, res: Response) {
       payment_method: 'parent_topup',
       status: 'completed',
       balance_after: newBalance,
-      description: description || `Parent top-up of ₹${amount}`,
+      description: description || `Parent top-up of ₹${amount}`
     });
 
     return res.status(200).json({ success: true, new_balance: newBalance });
@@ -4879,23 +5030,29 @@ export async function getParentFeeSummary(req: Request, res: Response) {
 
     const link = await resolveParentStudent(parentId, student_id as string);
     if (!link || !link.students) {
-      return res.status(200).json({ success: true, summary: { total_fees: 0, total_paid: 0, pending_amount: 0, fines: 0, wallet_balance: 0, breakdown: [], installments: [], recent_payments: [] } });
+      return res
+        .status(200)
+        .json({
+          success: true,
+          summary: {
+            total_fees: 0,
+            total_paid: 0,
+            pending_amount: 0,
+            fines: 0,
+            wallet_balance: 0,
+            breakdown: [],
+            installments: [],
+            recent_payments: []
+          }
+        });
     }
     const studentId = (link.students as any).id;
 
-    const { data: structures } = await supabaseAdmin
-      .from('fee_structures')
-      .select('*');
+    const { data: structures } = await supabaseAdmin.from('fee_structures').select('*');
 
-    const { data: payments } = await supabaseAdmin
-      .from('fee_payments')
-      .select('*')
-      .eq('student_id', studentId);
+    const { data: payments } = await supabaseAdmin.from('fee_payments').select('*').eq('student_id', studentId);
 
-    const { data: concessions } = await supabaseAdmin
-      .from('fee_concessions')
-      .select('*')
-      .eq('student_id', studentId);
+    const { data: concessions } = await supabaseAdmin.from('fee_concessions').select('*').eq('student_id', studentId);
 
     const { data: installments } = await supabaseAdmin
       .from('installment_plans')
@@ -4915,7 +5072,9 @@ export async function getParentFeeSummary(req: Request, res: Response) {
       .eq('status', 'unpaid');
 
     const totalFees = (structures || []).reduce((sum: number, s: any) => sum + Number(s.amount), 0);
-    const totalPaid = (payments || []).filter((p: any) => p.status === 'Completed').reduce((sum: number, p: any) => sum + Number(p.amount_paid), 0);
+    const totalPaid = (payments || [])
+      .filter((p: any) => p.status === 'Completed')
+      .reduce((sum: number, p: any) => sum + Number(p.amount_paid), 0);
     const totalConcessions = (concessions || []).reduce((sum: number, c: any) => sum + Number(c.amount), 0);
     const totalLibraryFines = (libraryFines || []).reduce((sum: number, f: any) => sum + Number(f.amount), 0);
     const pendingAmount = Math.max(0, totalFees - totalPaid - totalConcessions);
@@ -4945,11 +5104,17 @@ export async function getParentFeeSummary(req: Request, res: Response) {
       total: data.total,
       paid: data.paid,
       waiver: data.waiver,
-      pending: Math.max(0, data.total - data.paid - data.waiver),
+      pending: Math.max(0, data.total - data.paid - data.waiver)
     }));
 
     if (totalLibraryFines > 0) {
-      breakdown.push({ category: 'Library Fines', total: totalLibraryFines, paid: 0, waiver: 0, pending: totalLibraryFines });
+      breakdown.push({
+        category: 'Library Fines',
+        total: totalLibraryFines,
+        paid: 0,
+        waiver: 0,
+        pending: totalLibraryFines
+      });
     }
 
     return res.status(200).json({
@@ -4963,8 +5128,10 @@ export async function getParentFeeSummary(req: Request, res: Response) {
         wallet_balance: student?.wallet_balance || 0,
         breakdown,
         installments: installments || [],
-        recent_payments: (payments || []).sort((a: any, b: any) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()).slice(0, 10),
-      },
+        recent_payments: (payments || [])
+          .sort((a: any, b: any) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime())
+          .slice(0, 10)
+      }
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -5033,7 +5200,7 @@ export async function preauthorizeVisitor(req: Request, res: Response) {
       p_visitor_phone: visitor_phone || '',
       p_visit_date: visit_date,
       p_visit_time: visit_time || null,
-      p_purpose: purpose || null,
+      p_purpose: purpose || null
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Pre-authorization failed' });
@@ -5086,7 +5253,7 @@ export async function parentApplyLeave(req: Request, res: Response) {
         leave_type: leave_type || 'personal',
         applied_by: 'parent',
         parent_user_id: req.user?.id,
-        status: 'pending',
+        status: 'pending'
       })
       .select()
       .single();
@@ -5095,12 +5262,20 @@ export async function parentApplyLeave(req: Request, res: Response) {
 
     // Notify admin about new leave application
     try {
-      const { data: stu } = await supabaseAdmin.from('students').select('users(full_name), institutions(name)').eq('id', link.student_id).single();
+      const { data: stu } = await supabaseAdmin
+        .from('students')
+        .select('users(full_name), institutions(name)')
+        .eq('id', link.student_id)
+        .single();
       const studentName = (stu as any)?.users?.full_name || 'Student';
       // Find admin users for the institution
       const instId = (stu as any)?.institutions?.id;
       if (instId) {
-        const { data: admins } = await supabaseAdmin.from('users').select('id').eq('institution_id', instId).eq('role', 'Admin');
+        const { data: admins } = await supabaseAdmin
+          .from('users')
+          .select('id')
+          .eq('institution_id', instId)
+          .eq('role', 'Admin');
         if (admins) {
           for (const admin of admins) {
             await supabaseAdmin.from('parent_notifications').insert({
@@ -5109,12 +5284,14 @@ export async function parentApplyLeave(req: Request, res: Response) {
               notification_type: 'leave_applied',
               title: 'New Leave Application',
               message: `Leave application submitted for ${studentName} from ${start_date} to ${end_date}.`,
-              metadata: { student_name: studentName, start_date, end_date, leave_type: leave_type || 'personal' },
+              metadata: { student_name: studentName, start_date, end_date, leave_type: leave_type || 'personal' }
             });
           }
         }
       }
-    } catch { /* ignore notification errors */ }
+    } catch {
+      /* ignore notification errors */
+    }
 
     return res.status(201).json({ success: true, leave: data });
   } catch (err: any) {
@@ -5167,12 +5344,41 @@ export async function getMyStaffLeaves(req: Request, res: Response) {
       .eq('employee_id', employeeId)
       .order('created_at', { ascending: false });
 
-    const leaves = error ? [] : (data || []);
+    const leaves = error ? [] : data || [];
 
     const balances = [
-      { type: 'Casual Leave', total: 12, used: leaves.filter(l => l.status === 'approved' && (l.reason?.toLowerCase().includes('casual') || l.leave_type_id?.includes('casual'))).length || 2, remaining: 10 },
-      { type: 'Sick Leave', total: 10, used: leaves.filter(l => l.status === 'approved' && (l.reason?.toLowerCase().includes('sick') || l.leave_type_id?.includes('sick'))).length || 1, remaining: 9 },
-      { type: 'Earned Leave', total: 15, used: leaves.filter(l => l.status === 'approved' && (l.reason?.toLowerCase().includes('earned') || l.leave_type_id?.includes('earned'))).length || 0, remaining: 15 }
+      {
+        type: 'Casual Leave',
+        total: 12,
+        used:
+          leaves.filter(
+            (l) =>
+              l.status === 'approved' &&
+              (l.reason?.toLowerCase().includes('casual') || l.leave_type_id?.includes('casual'))
+          ).length || 2,
+        remaining: 10
+      },
+      {
+        type: 'Sick Leave',
+        total: 10,
+        used:
+          leaves.filter(
+            (l) =>
+              l.status === 'approved' && (l.reason?.toLowerCase().includes('sick') || l.leave_type_id?.includes('sick'))
+          ).length || 1,
+        remaining: 9
+      },
+      {
+        type: 'Earned Leave',
+        total: 15,
+        used:
+          leaves.filter(
+            (l) =>
+              l.status === 'approved' &&
+              (l.reason?.toLowerCase().includes('earned') || l.leave_type_id?.includes('earned'))
+          ).length || 0,
+        remaining: 15
+      }
     ];
 
     return res.status(200).json({ success: true, leaves, balances });
@@ -5190,7 +5396,9 @@ export async function applyStaffLeave(req: Request, res: Response) {
 
     const { leave_type, from_date, to_date, reason } = req.body;
     if (!leave_type || !from_date || !to_date || !reason) {
-      return res.status(400).json({ success: false, error: 'leave_type, from_date, to_date, and reason are required.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'leave_type, from_date, to_date, and reason are required.' });
     }
 
     let employeeId = userId;
@@ -5250,7 +5458,7 @@ export async function getCiaAssessments(req: Request, res: Response) {
     if (error) throw error;
     const assessments = (data || []).map((a: any) => ({
       ...a,
-      created_by_name: a.users?.full_name,
+      created_by_name: a.users?.full_name
     }));
     return res.status(200).json({ success: true, assessments });
   } catch (err: any) {
@@ -5260,7 +5468,18 @@ export async function getCiaAssessments(req: Request, res: Response) {
 
 export async function createCiaAssessment(req: Request, res: Response) {
   try {
-    const { name, assessment_type, subject, department_id, max_marks, weightage_pct, semester, batch_year, date, deadline } = req.body;
+    const {
+      name,
+      assessment_type,
+      subject,
+      department_id,
+      max_marks,
+      weightage_pct,
+      semester,
+      batch_year,
+      date,
+      deadline
+    } = req.body;
     if (!name || !assessment_type || !department_id) {
       return res.status(400).json({ success: false, error: 'name, assessment_type, and department_id required.' });
     }
@@ -5278,7 +5497,7 @@ export async function createCiaAssessment(req: Request, res: Response) {
         semester: semester || null,
         batch_year: batch_year || '',
         date: date || new Date().toISOString().split('T')[0],
-        deadline: deadline || null,
+        deadline: deadline || null
       })
       .select()
       .single();
@@ -5306,7 +5525,9 @@ export async function getCiaMarks(req: Request, res: Response) {
     }
 
     if (instId && assessment.institution_id !== instId && req.user?.role !== 'SuperAdmin') {
-      return res.status(403).json({ success: false, error: 'Access denied. Assessment belongs to another institution.' });
+      return res
+        .status(403)
+        .json({ success: false, error: 'Access denied. Assessment belongs to another institution.' });
     }
 
     const { data, error } = await supabaseAdmin
@@ -5318,7 +5539,7 @@ export async function getCiaMarks(req: Request, res: Response) {
     const marks = (data || []).map((m: any) => ({
       ...m,
       student_name: m.students?.users?.full_name,
-      roll_number: m.students?.roll_number,
+      roll_number: m.students?.roll_number
     }));
     return res.status(200).json({ success: true, marks });
   } catch (err: any) {
@@ -5334,7 +5555,7 @@ export async function enterCiaMarks(req: Request, res: Response) {
     }
     const { data, error } = await supabaseAdmin.rpc('bulk_enter_cia_marks', {
       p_assessment_id: assessment_id,
-      p_marks: JSON.stringify(marks),
+      p_marks: JSON.stringify(marks)
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Marks entry failed' });
@@ -5371,7 +5592,13 @@ export async function getMyCiaMarks(req: Request, res: Response) {
 
     const assessmentIds = (assessments || []).map((a: any) => a.id);
     if (assessmentIds.length === 0) {
-      return res.status(200).json({ success: true, marks: [], summary: { total_assessments: 0, total_marks_obtained: 0, total_max_marks: 0, overall_percentage: 0 } });
+      return res
+        .status(200)
+        .json({
+          success: true,
+          marks: [],
+          summary: { total_assessments: 0, total_marks_obtained: 0, total_max_marks: 0, overall_percentage: 0 }
+        });
     }
 
     const { data: myMarks, error: marksErr } = await supabaseAdmin
@@ -5401,7 +5628,7 @@ export async function getMyCiaMarks(req: Request, res: Response) {
         marks_obtained: mark?.marks_obtained ?? null,
         percentage: mark && a.max_marks > 0 ? ((mark.marks_obtained / a.max_marks) * 100).toFixed(1) : null,
         remarks: mark?.remarks || null,
-        entered_at: mark?.entered_at || null,
+        entered_at: mark?.entered_at || null
       };
     });
 
@@ -5417,8 +5644,8 @@ export async function getMyCiaMarks(req: Request, res: Response) {
         graded_assessments: graded.length,
         total_marks_obtained: totalObtained,
         total_max_marks: totalMax,
-        overall_percentage: totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(1) : '0',
-      },
+        overall_percentage: totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(1) : '0'
+      }
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -5433,7 +5660,7 @@ export async function getAttendanceShortageReport(req: Request, res: Response) {
     }
     const { data, error } = await supabaseAdmin.rpc('get_class_attendance_shortage', {
       p_department_id: departmentId,
-      p_subject: subject || null,
+      p_subject: subject || null
     });
     if (error) throw error;
     return res.status(200).json({ success: true, students: data || [] });
@@ -5460,7 +5687,7 @@ export async function getPendingLeaves(req: Request, res: Response) {
     const leaves = (data || []).map((l: any) => ({
       ...l,
       student_name: l.students?.users?.full_name,
-      roll_number: l.students?.roll_number,
+      roll_number: l.students?.roll_number
     }));
     return res.status(200).json({ success: true, leaves });
   } catch (err: any) {
@@ -5487,13 +5714,15 @@ export async function approveLeaveFaculty(req: Request, res: Response) {
     }
 
     if (instId && leave.institution_id !== instId && req.user?.role !== 'SuperAdmin') {
-      return res.status(403).json({ success: false, error: 'Access denied. Leave application belongs to another institution.' });
+      return res
+        .status(403)
+        .json({ success: false, error: 'Access denied. Leave application belongs to another institution.' });
     }
 
     const { data, error } = await supabaseAdmin.rpc('approve_leave', {
       p_leave_id: id,
       p_approver_role: userRole,
-      p_remarks: remarks || '',
+      p_remarks: remarks || ''
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Approval failed' });
@@ -5520,12 +5749,14 @@ export async function rejectLeaveFaculty(req: Request, res: Response) {
     }
 
     if (instId && leave.institution_id !== instId && req.user?.role !== 'SuperAdmin') {
-      return res.status(403).json({ success: false, error: 'Access denied. Leave application belongs to another institution.' });
+      return res
+        .status(403)
+        .json({ success: false, error: 'Access denied. Leave application belongs to another institution.' });
     }
 
     const { data, error } = await supabaseAdmin.rpc('reject_leave', {
       p_leave_id: id,
-      p_remarks: remarks || '',
+      p_remarks: remarks || ''
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Rejection failed' });
@@ -5562,7 +5793,7 @@ export async function getTeacherTimetable(req: Request, res: Response) {
     }
 
     const { data, error } = await supabaseAdmin.rpc('get_teacher_timetable', {
-      p_teacher_id: req.user?.id,
+      p_teacher_id: req.user?.id
     });
     if (error) throw error;
     return res.status(200).json({ success: true, timetable: data || [] });
@@ -5595,9 +5826,22 @@ export async function getAdmissions(req: Request, res: Response) {
 
 export async function createAdmission(req: Request, res: Response) {
   try {
-    const { applicant_name, email, phone, department_id, semester, batch_year,
-            guardian_name, guardian_phone, dob, gender, address, category,
-            blood_group, aadhaar_number } = req.body;
+    const {
+      applicant_name,
+      email,
+      phone,
+      department_id,
+      semester,
+      batch_year,
+      guardian_name,
+      guardian_phone,
+      dob,
+      gender,
+      address,
+      category,
+      blood_group,
+      aadhaar_number
+    } = req.body;
     if (!applicant_name) {
       return res.status(400).json({ success: false, error: 'applicant_name required.' });
     }
@@ -5606,13 +5850,22 @@ export async function createAdmission(req: Request, res: Response) {
       .from('student_admissions')
       .insert({
         institution_id: req.user?.institution_id,
-        applicant_name, email, phone, department_id,
+        applicant_name,
+        email,
+        phone,
+        department_id,
         application_number: appNumber,
         semester: semester || 1,
         batch_year: batch_year || new Date().getFullYear().toString(),
-        guardian_name, guardian_phone, dob, gender, address, category,
-        blood_group, aadhaar_number,
-        admission_status: 'applied',
+        guardian_name,
+        guardian_phone,
+        dob,
+        gender,
+        address,
+        category,
+        blood_group,
+        aadhaar_number,
+        admission_status: 'applied'
       })
       .select()
       .single();
@@ -5623,7 +5876,7 @@ export async function createAdmission(req: Request, res: Response) {
       admission_id: data.id,
       action: 'application_submitted',
       performed_by: req.user?.id,
-      remarks: 'Application created',
+      remarks: 'Application created'
     });
 
     return res.status(200).json({ success: true, admission: data });
@@ -5636,7 +5889,15 @@ export async function updateAdmissionStatus(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { status, remarks } = req.body;
-    const validStatuses = ['applied', 'documents_pending', 'under_review', 'approved', 'enrolled', 'rejected', 'waitlisted'];
+    const validStatuses = [
+      'applied',
+      'documents_pending',
+      'under_review',
+      'approved',
+      'enrolled',
+      'rejected',
+      'waitlisted'
+    ];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ success: false, error: 'Invalid status.' });
     }
@@ -5650,7 +5911,7 @@ export async function updateAdmissionStatus(req: Request, res: Response) {
       admission_id: id,
       action: `status_changed_to_${status}`,
       performed_by: req.user?.id,
-      remarks: remarks || `Status changed to ${status}`,
+      remarks: remarks || `Status changed to ${status}`
     });
 
     return res.status(200).json({ success: true });
@@ -5685,7 +5946,7 @@ export async function bulkAdmitStudents(req: Request, res: Response) {
     }
     const { data, error } = await supabaseAdmin.rpc('bulk_admit_students', {
       p_students: JSON.stringify(students),
-      p_institution_id: req.user?.institution_id,
+      p_institution_id: req.user?.institution_id
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Bulk admit failed' });
@@ -5705,7 +5966,7 @@ export async function detectTimetableConflicts(req: Request, res: Response) {
     }
     const { data, error } = await supabaseAdmin.rpc('detect_timetable_conflicts', {
       p_institution_id: req.user?.institution_id,
-      pSlots: JSON.stringify(slots),
+      pSlots: JSON.stringify(slots)
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Conflict detection failed' });
@@ -5725,12 +5986,15 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
     }
 
     const v_days = inputDays?.length ? inputDays : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const v_slots = time_slots?.length ? time_slots : ['09:00 - 10:00 AM', '10:15 - 11:15 AM', '11:30 - 12:30 PM', '02:00 - 03:00 PM'];
+    const v_slots = time_slots?.length
+      ? time_slots
+      : ['09:00 - 10:00 AM', '10:15 - 11:15 AM', '11:30 - 12:30 PM', '02:00 - 03:00 PM'];
     const v_rooms = inputRooms?.length ? inputRooms : ['Room 1', 'Room 2', 'Room 3'];
 
     // Fetch existing timetable for conflict detection (moved up to avoid declaration errors)
     const { data: existing } = await supabaseAdmin
-      .from('timetable').select('day_of_week, time_slot, teacher_id, room')
+      .from('timetable')
+      .select('day_of_week, time_slot, teacher_id, room')
       .eq('institution_id', institution_id);
 
     // ─── STEP 0: Pre-assign Period 1 to class teachers ──────────
@@ -5761,7 +6025,7 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
               teacher_id: cs.class_teacher_id,
               class_section_id: cs.id,
               room: `Grade ${cs.grade}-${cs.section}`,
-              isClassTeacherPeriod: true,
+              isClassTeacherPeriod: true
             });
             existingTeacherSlots.add(daySlotKey); // prevent same teacher double-booked
           }
@@ -5796,7 +6060,9 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
     }
 
     if (lessons.length === 0 && classTeacherLessons.length === 0) {
-      return res.status(400).json({ success: false, error: 'No valid lessons to schedule. Ensure each subject has a valid teacher_id.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'No valid lessons to schedule. Ensure each subject has a valid teacher_id.' });
     }
 
     // Prepend class teacher lessons — they get priority for Period 1
@@ -5806,9 +6072,9 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
     // (Already fetched at the beginning of function to avoid TDZ block scoping issues)
 
     // Build conflict maps: teacher conflicts, room conflicts, class_section conflicts
-    const teacherOccupied = new Set<string>();   // "day|slot|teacher_id"
-    const roomOccupied = new Set<string>();      // "day|slot|room"
-    const classOccupied = new Set<string>();     // "day|slot|class_section_id"
+    const teacherOccupied = new Set<string>(); // "day|slot|teacher_id"
+    const roomOccupied = new Set<string>(); // "day|slot|room"
+    const classOccupied = new Set<string>(); // "day|slot|class_section_id"
 
     (existing || []).forEach((e: any) => {
       teacherOccupied.add(`${e.day_of_week}|${e.time_slot}|${e.teacher_id}`);
@@ -5819,7 +6085,7 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
     // Teachers with fewer free slots go first (most constrained)
     const totalSlots = v_days.length * v_slots.length;
     const teacherFreeCount: Record<string, number> = {};
-    lessons.forEach(l => {
+    lessons.forEach((l) => {
       if (!teacherFreeCount[l.teacher_id]) teacherFreeCount[l.teacher_id] = 0;
     });
     // Count free slots per teacher
@@ -5833,13 +6099,15 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
       teacherFreeCount[tid] = free;
     }
     // Sort: teachers with fewer free slots first (most constrained = scheduled first)
-    lessons.sort((a, b) => (teacherFreeCount[a.teacher_id] || totalSlots) - (teacherFreeCount[b.teacher_id] || totalSlots));
+    lessons.sort(
+      (a, b) => (teacherFreeCount[a.teacher_id] || totalSlots) - (teacherFreeCount[b.teacher_id] || totalSlots)
+    );
 
     // ─── STEP 4: Greedy assignment with backtracking-free first-fit ──
     let inserted = 0;
     const conflicts: any[] = [];
-    const teacherTimetables: Record<string, any[]> = {};  // teacher_id -> [{day, slot, subject, room, class_section}]
-    const classTimetables: Record<string, any[]> = {};    // class_section_id -> [{day, slot, subject, teacher, room}]
+    const teacherTimetables: Record<string, any[]> = {}; // teacher_id -> [{day, slot, subject, room, class_section}]
+    const classTimetables: Record<string, any[]> = {}; // class_section_id -> [{day, slot, subject, teacher, room}]
 
     for (const lesson of lessons) {
       let placed = false;
@@ -5862,7 +6130,7 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
               time_slot: slot,
               subject: lesson.subject,
               teacher_id: lesson.teacher_id,
-              room: lesson.room,
+              room: lesson.room
             };
             if (department_id) insertData.department_id = department_id;
             if (lesson.class_section_id) insertData.class_section_id = lesson.class_section_id;
@@ -5883,13 +6151,20 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
               // Track in memory for response
               if (!teacherTimetables[lesson.teacher_id]) teacherTimetables[lesson.teacher_id] = [];
               teacherTimetables[lesson.teacher_id].push({
-                day, slot, subject: lesson.subject, room: lesson.room,
-                class_section_id: lesson.class_section_id || null,
+                day,
+                slot,
+                subject: lesson.subject,
+                room: lesson.room,
+                class_section_id: lesson.class_section_id || null
               });
               if (lesson.class_section_id) {
                 if (!classTimetables[lesson.class_section_id]) classTimetables[lesson.class_section_id] = [];
                 classTimetables[lesson.class_section_id].push({
-                  day, slot, subject: lesson.subject, teacher_id: lesson.teacher_id, room: lesson.room,
+                  day,
+                  slot,
+                  subject: lesson.subject,
+                  teacher_id: lesson.teacher_id,
+                  room: lesson.room
                 });
               }
               break;
@@ -5904,7 +6179,7 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
           subject: lesson.subject,
           teacher_id: lesson.teacher_id,
           class_section_id: lesson.class_section_id || null,
-          reason: 'No available slot (teacher/room/class all occupied)',
+          reason: 'No available slot (teacher/room/class all occupied)'
         });
       }
     }
@@ -5914,7 +6189,7 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
     const teacherDailyLoad: Record<string, Record<string, number>> = {};
     for (const [tid, entries] of Object.entries(teacherTimetables)) {
       teacherDailyLoad[tid] = {};
-      entries.forEach(e => {
+      entries.forEach((e) => {
         teacherDailyLoad[tid][e.day] = (teacherDailyLoad[tid][e.day] || 0) + 1;
       });
     }
@@ -5927,7 +6202,7 @@ export async function autoGenerateTimetable(req: Request, res: Response) {
       teacher_timetables: teacherTimetables,
       student_timetables: classTimetables,
       teacher_daily_load: teacherDailyLoad,
-      message: `Scheduled ${inserted} lessons. ${conflicts.length > 0 ? `${conflicts.length} conflicts.` : 'No conflicts!'}`,
+      message: `Scheduled ${inserted} lessons. ${conflicts.length > 0 ? `${conflicts.length} conflicts.` : 'No conflicts!'}`
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -5957,9 +6232,13 @@ export async function createTimetableConstraint(req: Request, res: Response) {
       .from('timetable_constraints')
       .insert({
         institution_id: req.user?.institution_id,
-        constraint_type, teacher_id, room, day_of_week, time_slot,
+        constraint_type,
+        teacher_id,
+        room,
+        day_of_week,
+        time_slot,
         max_hours_per_day: max_hours_per_day || 6,
-        notes,
+        notes
       })
       .select()
       .single();
@@ -5979,7 +6258,7 @@ export async function getConsolidatedDefaulters(req: Request, res: Response) {
     const { data, error } = await supabaseAdmin.rpc('get_consolidated_defaulters', {
       p_institution_id: req.user?.institution_id,
       p_attendance_threshold: threshold ? parseFloat(threshold as string) : 75,
-      p_fee_overdue_days: overdueDays ? parseInt(overdueDays as string) : 30,
+      p_fee_overdue_days: overdueDays ? parseInt(overdueDays as string) : 30
     });
     if (error) throw error;
     return res.status(200).json({ success: true, defaulters: data || [] });
@@ -5998,7 +6277,7 @@ export async function getAcademicCalendar(req: Request, res: Response) {
     const { data, error } = await supabaseAdmin.rpc('get_academic_calendar_upcoming', {
       p_institution_id: req.user?.institution_id,
       p_from_date: fromDate,
-      p_months_ahead: months ? parseInt(months as string) : 12,
+      p_months_ahead: months ? parseInt(months as string) : 12
     });
     if (error) throw error;
     return res.status(200).json({ success: true, events: data || [] });
@@ -6009,8 +6288,8 @@ export async function getAcademicCalendar(req: Request, res: Response) {
 
 export async function createCalendarEvent(req: Request, res: Response) {
   try {
-    const { title, event_type, description, start_date, end_date, semester,
-            batch_year, color, is_published } = req.body;
+    const { title, event_type, description, start_date, end_date, semester, batch_year, color, is_published } =
+      req.body;
     if (!title || !event_type || !start_date) {
       return res.status(400).json({ success: false, error: 'title, event_type, and start_date required.' });
     }
@@ -6018,11 +6297,16 @@ export async function createCalendarEvent(req: Request, res: Response) {
       .from('academic_calendar')
       .insert({
         institution_id: req.user?.institution_id,
-        title, event_type, description, start_date, end_date,
-        semester, batch_year,
+        title,
+        event_type,
+        description,
+        start_date,
+        end_date,
+        semester,
+        batch_year,
         color: color || '#6C2BD9',
         is_published: is_published !== false,
-        created_by: req.user?.id,
+        created_by: req.user?.id
       })
       .select()
       .single();
@@ -6037,10 +6321,7 @@ export async function updateCalendarEvent(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const updates = req.body;
-    const { error } = await supabaseAdmin
-      .from('academic_calendar')
-      .update(updates)
-      .eq('id', id);
+    const { error } = await supabaseAdmin.from('academic_calendar').update(updates).eq('id', id);
     if (error) throw error;
     return res.status(200).json({ success: true });
   } catch (err: any) {
@@ -6051,10 +6332,7 @@ export async function updateCalendarEvent(req: Request, res: Response) {
 export async function deleteCalendarEvent(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { error } = await supabaseAdmin
-      .from('academic_calendar')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabaseAdmin.from('academic_calendar').delete().eq('id', id);
     if (error) throw error;
     return res.status(200).json({ success: true });
   } catch (err: any) {
@@ -6105,7 +6383,7 @@ export async function approveVisitor(req: Request, res: Response) {
       p_visitor_id: id,
       p_warden_id: req.user?.id,
       p_approve: approve,
-      p_remarks: remarks || '',
+      p_remarks: remarks || ''
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Approval failed' });
@@ -6132,7 +6410,7 @@ export async function checkoutRoom(req: Request, res: Response) {
       p_allocation_id: id,
       p_warden_id: req.user?.id,
       p_reason: reason || '',
-      p_deposit_action: deposit_action || 'refunded',
+      p_deposit_action: deposit_action || 'refunded'
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Checkout failed' });
@@ -6151,7 +6429,7 @@ export async function markCurfewCheckin(req: Request, res: Response) {
       p_block_id: block_id,
       p_warden_id: req.user?.id,
       pcheck_date: date || new Date().toISOString().split('T')[0],
-      p_students: JSON.stringify(students),
+      p_students: JSON.stringify(students)
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Check-in failed' });
@@ -6168,7 +6446,7 @@ export async function getCurfewStatus(req: Request, res: Response) {
     }
     const { data, error } = await supabaseAdmin.rpc('get_curfew_status', {
       p_block_id: blockId,
-      pcheck_date: date || new Date().toISOString().split('T')[0],
+      pcheck_date: date || new Date().toISOString().split('T')[0]
     });
     if (error) throw error;
     return res.status(200).json({ success: true, students: data || [] });
@@ -6184,7 +6462,7 @@ export async function getBlockMealSubscriptions(req: Request, res: Response) {
       return res.status(400).json({ success: false, error: 'blockId required.' });
     }
     const { data, error } = await supabaseAdmin.rpc('get_block_meal_subscriptions', {
-      p_block_id: blockId,
+      p_block_id: blockId
     });
     if (error) throw error;
     return res.status(200).json({ success: true, subscriptions: data || [] });
@@ -6201,7 +6479,7 @@ export async function approveRoomTransfer(req: Request, res: Response) {
       p_request_id: id,
       p_warden_id: req.user?.id,
       p_approve: approve,
-      p_remarks: remarks || '',
+      p_remarks: remarks || ''
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Approval failed' });
@@ -6214,7 +6492,7 @@ export async function completeRoomTransfer(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { data, error } = await supabaseAdmin.rpc('complete_room_transfer', {
-      p_request_id: id,
+      p_request_id: id
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Transfer failed' });
@@ -6228,7 +6506,9 @@ export async function getRoomTransferRequests(req: Request, res: Response) {
     const { status } = req.query;
     let query = supabaseAdmin
       .from('room_transfer_requests')
-      .select('*, students(roll_number, users(full_name)), hostel_rooms!current_room_id(room_number), hostel_rooms!requested_room_id(room_number)')
+      .select(
+        '*, students(roll_number, users(full_name)), hostel_rooms!current_room_id(room_number), hostel_rooms!requested_room_id(room_number)'
+      )
       .order('created_at', { ascending: false });
 
     if (status) query = query.eq('status', status);
@@ -6251,7 +6531,7 @@ export async function verifyPersonAtGate(req: Request, res: Response) {
       return res.status(400).json({ success: false, error: 'identifier required.' });
     }
     const { data, error } = await supabaseAdmin.rpc('verify_person_at_gate', {
-      p_identifier: identifier,
+      p_identifier: identifier
     });
     if (error) throw error;
     return res.status(200).json({ success: true, persons: data || [] });
@@ -6267,7 +6547,7 @@ export async function gateScanLookup(req: Request, res: Response) {
       return res.status(400).json({ success: false, error: 'identifier required.' });
     }
     const { data, error } = await supabaseAdmin.rpc('gate_scan_lookup', {
-      p_identifier: identifier,
+      p_identifier: identifier
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Lookup failed' });
@@ -6290,7 +6570,7 @@ export async function checkPersonRestricted(req: Request, res: Response) {
   try {
     const { personId } = req.params;
     const { data, error } = await supabaseAdmin.rpc('check_person_restricted', {
-      p_person_id: personId,
+      p_person_id: personId
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { is_restricted: false });
@@ -6303,15 +6583,20 @@ export async function createAccessRestriction(req: Request, res: Response) {
   try {
     const { person_type, person_id, restriction_type, reason, valid_until } = req.body;
     if (!person_type || !person_id || !restriction_type || !reason) {
-      return res.status(400).json({ success: false, error: 'person_type, person_id, restriction_type, and reason required.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'person_type, person_id, restriction_type, and reason required.' });
     }
     const { data, error } = await supabaseAdmin
       .from('access_restrictions')
       .insert({
         institution_id: req.user?.institution_id,
-        person_type, person_id, restriction_type, reason,
+        person_type,
+        person_id,
+        restriction_type,
+        reason,
         restricted_by: req.user?.id,
-        valid_until: valid_until || null,
+        valid_until: valid_until || null
       })
       .select()
       .single();
@@ -6333,7 +6618,7 @@ export async function getAccessRestrictions(req: Request, res: Response) {
     if (error) throw error;
     const restrictions = (data || []).map((r: any) => ({
       ...r,
-      restricted_by_name: r.users?.full_name,
+      restricted_by_name: r.users?.full_name
     }));
     return res.status(200).json({ success: true, restrictions });
   } catch (err: any) {
@@ -6405,7 +6690,7 @@ export async function vehicleEntry(req: Request, res: Response) {
       p_driver_name: driver_name || '',
       p_driver_phone: driver_phone || '',
       p_purpose: purpose || '',
-      p_gate_number: gate_number || '1',
+      p_gate_number: gate_number || '1'
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Entry failed' });
@@ -6488,7 +6773,7 @@ export async function startBusTrip(req: Request, res: Response) {
     const { data, error } = await supabaseAdmin.rpc('start_bus_trip', {
       p_bus_id: bus_id,
       p_route_id: route_id,
-      p_trip_type: trip_type || 'morning',
+      p_trip_type: trip_type || 'morning'
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Failed to start trip' });
@@ -6565,7 +6850,7 @@ export async function markStopReached(req: Request, res: Response) {
     const { data, error } = await supabaseAdmin.rpc('mark_stop_reached', {
       p_stop_index: stop_index,
       p_passengers_boarded: passengers_boarded || 0,
-      p_passengers_alighted: passengers_alighted || 0,
+      p_passengers_alighted: passengers_alighted || 0
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Failed to mark stop' });
@@ -6585,7 +6870,7 @@ export async function reportBusIncident(req: Request, res: Response) {
       p_description: description,
       p_latitude: latitude || 0,
       p_longitude: longitude || 0,
-      p_severity: severity || 'high',
+      p_severity: severity || 'high'
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Failed to report incident' });
@@ -6614,7 +6899,7 @@ export async function getVendorOrders(req: Request, res: Response) {
     const orders = (data || []).map((o: any) => ({
       ...o,
       student_name: o.students?.users?.full_name,
-      roll_number: o.students?.roll_number,
+      roll_number: o.students?.roll_number
     }));
     return res.status(200).json({ success: true, orders });
   } catch (err: any) {
@@ -6632,7 +6917,7 @@ export async function updateOrderStatus(req: Request, res: Response) {
     const { data, error } = await supabaseAdmin.rpc('update_order_status', {
       p_order_id: id,
       p_new_status: status,
-      p_notes: notes || '',
+      p_notes: notes || ''
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Status update failed' });
@@ -6647,7 +6932,7 @@ export async function toggleMenuAvailability(req: Request, res: Response) {
     const { is_available } = req.body;
     const { data, error } = await supabaseAdmin.rpc('toggle_menu_availability', {
       p_menu_id: id,
-      p_is_available: is_available,
+      p_is_available: is_available
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Toggle failed' });
@@ -6662,7 +6947,7 @@ export async function updateMenuPrice(req: Request, res: Response) {
     const { price } = req.body;
     const { data, error } = await supabaseAdmin.rpc('update_menu_price', {
       p_menu_id: id,
-      p_new_price: price,
+      p_new_price: price
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Price update failed' });
@@ -6677,7 +6962,7 @@ export async function updateMenuStock(req: Request, res: Response) {
     const { stock } = req.body;
     const { data, error } = await supabaseAdmin.rpc('update_menu_stock', {
       p_menu_id: id,
-      p_new_stock: stock,
+      p_new_stock: stock
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Stock update failed' });
@@ -6690,7 +6975,7 @@ export async function getVendorDailySales(req: Request, res: Response) {
   try {
     const { date } = req.query;
     const { data, error } = await supabaseAdmin.rpc('get_vendor_daily_sales', {
-      p_date: date || new Date().toISOString().split('T')[0],
+      p_date: date || new Date().toISOString().split('T')[0]
     });
     if (error) throw error;
     return res.status(200).json(data?.[0] || { success: false, error: 'Sales report failed' });
@@ -6703,7 +6988,7 @@ export async function getPrepList(req: Request, res: Response) {
   try {
     const { date } = req.query;
     const { data, error } = await supabaseAdmin.rpc('get_canteen_prep_list', {
-      p_date: date || new Date().toISOString().split('T')[0],
+      p_date: date || new Date().toISOString().split('T')[0]
     });
     if (error) throw error;
     return res.status(200).json({ success: true, items: data || [] });
@@ -6725,7 +7010,7 @@ export async function deductWallet(req: Request, res: Response) {
       p_student_id: student_id,
       p_amount: amount,
       p_description: description || 'Wallet deduction',
-      p_module: module || 'general',
+      p_module: module || 'general'
     });
     if (error) throw error;
     return res.status(200).json(data);
@@ -6752,14 +7037,14 @@ export async function initiateWalletTopUp(req: Request, res: Response) {
         success: true,
         order_id,
         amount: amount * 100,
-        currency: 'INR',
+        currency: 'INR'
       });
     }
 
     const order = await razorpay.orders.create({
       amount: amount * 100,
       currency: 'INR',
-      receipt: `wallet_topup_${Date.now()}`,
+      receipt: `wallet_topup_${Date.now()}`
     });
 
     return res.status(200).json({
@@ -6767,7 +7052,7 @@ export async function initiateWalletTopUp(req: Request, res: Response) {
       order_id: order.id,
       amount: order.amount,
       currency: order.currency,
-      key_id: process.env.RAZORPAY_KEY_ID,
+      key_id: process.env.RAZORPAY_KEY_ID
     });
   } catch (err) {
     logger.error('initiateWalletTopUp error:', err);
@@ -6781,19 +7066,48 @@ export async function initiateWalletTopUp(req: Request, res: Response) {
 export async function creditWallet(req: Request, res: Response) {
   try {
     const { amount, razorpay_order_id, razorpay_payment_id } = req.body;
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ success: false, error: 'Valid amount required.' });
-    }
 
     const razorpay = getRazorpayClient();
-    if (razorpay && razorpay_order_id && !isMockOrderId(razorpay_order_id)) {
+    let creditAmount = Number(amount);
+
+    if (razorpay) {
+      if (!razorpay_order_id || !razorpay_payment_id) {
+        return res
+          .status(400)
+          .json({ success: false, error: 'razorpay_order_id and razorpay_payment_id are required.' });
+      }
+
       try {
         const payment = await razorpay.payments.fetch(razorpay_payment_id);
-        if (payment.status !== 'captured') {
-          return res.status(400).json({ success: false, error: 'Payment not captured.' });
+        if (!payment || payment.status !== 'captured') {
+          return res.status(400).json({ success: false, error: 'Payment is not captured.' });
         }
-      } catch {
-        return res.status(400).json({ success: false, error: 'Payment verification failed.' });
+        if (payment.order_id && payment.order_id !== razorpay_order_id) {
+          return res.status(400).json({ success: false, error: 'Razorpay order ID mismatch.' });
+        }
+
+        const verifiedAmount = Number(payment.amount) / 100;
+        if (!verifiedAmount || verifiedAmount <= 0) {
+          return res.status(400).json({ success: false, error: 'Invalid payment amount from Razorpay.' });
+        }
+
+        if (amount && Math.abs(verifiedAmount - Number(amount)) >= 0.01) {
+          return res
+            .status(400)
+            .json({ success: false, error: 'Claimed top-up amount does not match actual Razorpay payment.' });
+        }
+
+        creditAmount = verifiedAmount;
+      } catch (rzpErr) {
+        logger.error('Razorpay payment fetch error in creditWallet:', rzpErr);
+        return res.status(400).json({ success: false, error: 'Failed to verify payment with Razorpay.' });
+      }
+    } else {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ success: false, error: 'Payment gateway configuration error.' });
+      }
+      if (!creditAmount || creditAmount <= 0) {
+        return res.status(400).json({ success: false, error: 'Valid amount required.' });
       }
     }
 
@@ -6804,7 +7118,7 @@ export async function creditWallet(req: Request, res: Response) {
 
     const { data: student, error: studentErr } = await supabaseAdmin
       .from('students')
-      .select('id, wallet_balance')
+      .select('id, wallet_balance, institution_id')
       .eq('user_id', userId)
       .maybeSingle();
 
@@ -6812,7 +7126,20 @@ export async function creditWallet(req: Request, res: Response) {
       return res.status(404).json({ success: false, error: 'Student record not found.' });
     }
 
-    const newBalance = (student.wallet_balance || 0) + amount;
+    // Idempotency check using razorpay_payment_id
+    if (razorpay_payment_id) {
+      const { data: existingTx } = await supabaseAdmin
+        .from('wallet_transactions')
+        .select('id')
+        .eq('razorpay_payment_id', razorpay_payment_id)
+        .maybeSingle();
+
+      if (existingTx) {
+        return res.status(409).json({ success: false, error: 'Duplicate top-up: Payment ID already processed.' });
+      }
+    }
+
+    const newBalance = (student.wallet_balance || 0) + creditAmount;
 
     const { error: updateErr } = await supabaseAdmin
       .from('students')
@@ -6822,12 +7149,15 @@ export async function creditWallet(req: Request, res: Response) {
     if (updateErr) throw updateErr;
 
     await supabaseAdmin.from('wallet_transactions').insert({
+      institution_id: student.institution_id || req.user?.institution_id,
       student_id: student.id,
       type: 'credit',
-      amount,
+      amount: creditAmount,
       payment_method: 'razorpay',
+      razorpay_order_id: razorpay_order_id || null,
+      razorpay_payment_id: razorpay_payment_id || null,
       status: 'completed',
-      description: 'IRIS Balance Top-up via Razorpay',
+      description: 'IRIS Balance Top-up via Razorpay'
     });
 
     return res.status(200).json({ success: true, new_balance: newBalance });
@@ -6853,14 +7183,16 @@ export async function getAvailableCourses(req: Request, res: Response) {
 
     if (!student) return res.status(404).json({ success: false, error: 'Student not found' });
 
-    const academicYear = req.query.academic_year as string || new Date().getFullYear().toString();
+    const academicYear = (req.query.academic_year as string) || new Date().getFullYear().toString();
 
     const { data: courses, error } = await supabaseAdmin
       .from('courses')
-      .select(`
+      .select(
+        `
         id, course_code, course_name, credits, course_type, semester, academic_year, is_active,
         department:departments(id, name)
-      `)
+      `
+      )
       .eq('institution_id', student.institution_id)
       .eq('is_active', true)
       .or(`semester.is.null,semester.eq.${student.semester}`);
@@ -6879,7 +7211,7 @@ export async function getAvailableCourses(req: Request, res: Response) {
       ...c,
       department_name: c.department?.name || null,
       registration: regMap.get(c.id) || null,
-      is_registered: regMap.has(c.id) && regMap.get(c.id)?.status === 'active',
+      is_registered: regMap.has(c.id) && regMap.get(c.id)?.status === 'active'
     }));
 
     return res.status(200).json({ success: true, courses: enriched, semester: student.semester });
@@ -6916,7 +7248,12 @@ export async function registerForCourse(req: Request, res: Response) {
     }
 
     if (course.semester && course.semester !== student.semester) {
-      return res.status(400).json({ success: false, error: `This course is for semester ${course.semester}. You are in semester ${student.semester}.` });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: `This course is for semester ${course.semester}. You are in semester ${student.semester}.`
+        });
     }
 
     const academicYear = new Date().getFullYear().toString();
@@ -6942,7 +7279,12 @@ export async function registerForCourse(req: Request, res: Response) {
 
     const totalCredits = (activeRegs || []).reduce((sum: number, r: any) => sum + (r.course?.credits || 0), 0);
     if (totalCredits + (course.credits || 0) > 24) {
-      return res.status(400).json({ success: false, error: `Cannot exceed 24 credits per semester. Currently registered: ${totalCredits} credits.` });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: `Cannot exceed 24 credits per semester. Currently registered: ${totalCredits} credits.`
+        });
     }
 
     if (existing && existing.status === 'dropped') {
@@ -6952,15 +7294,13 @@ export async function registerForCourse(req: Request, res: Response) {
         .eq('id', existing.id);
       if (error) throw error;
     } else {
-      const { error } = await supabaseAdmin
-        .from('course_registrations')
-        .insert({
-          institution_id: student.institution_id,
-          student_id: student.id,
-          course_id: parse.data.course_id,
-          academic_year: academicYear,
-          semester: student.semester,
-        });
+      const { error } = await supabaseAdmin.from('course_registrations').insert({
+        institution_id: student.institution_id,
+        student_id: student.id,
+        course_id: parse.data.course_id,
+        academic_year: academicYear,
+        semester: student.semester
+      });
       if (error) throw error;
     }
 
@@ -6979,11 +7319,7 @@ export async function dropCourse(req: Request, res: Response) {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
-    const { data: student } = await supabaseAdmin
-      .from('students')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: student } = await supabaseAdmin.from('students').select('id').eq('user_id', userId).maybeSingle();
 
     if (!student) return res.status(404).json({ success: false, error: 'Student not found' });
 
@@ -7028,14 +7364,16 @@ export async function getMyCourses(req: Request, res: Response) {
 
     if (!student) return res.status(404).json({ success: false, error: 'Student not found' });
 
-    const academicYear = req.query.academic_year as string || new Date().getFullYear().toString();
+    const academicYear = (req.query.academic_year as string) || new Date().getFullYear().toString();
 
     const { data: registrations, error } = await supabaseAdmin
       .from('course_registrations')
-      .select(`
+      .select(
+        `
         id, status, registered_at, dropped_at,
         course:courses(id, course_code, course_name, credits, course_type, semester)
-      `)
+      `
+      )
       .eq('student_id', student.id)
       .eq('academic_year', academicYear)
       .order('registered_at', { ascending: false });
@@ -7117,7 +7455,7 @@ export async function enrollInExam(req: Request, res: Response) {
         institution_id: student.institution_id,
         exam_id,
         student_id: student.id,
-        status: 'enrolled',
+        status: 'enrolled'
       })
       .select()
       .single();
@@ -7146,7 +7484,7 @@ export async function getExamEnrollments(req: Request, res: Response) {
       ...e,
       student_name: e.students?.users?.name || 'Unknown',
       roll_number: e.students?.roll_number || 'N/A',
-      student_email: e.students?.users?.email || '',
+      student_email: e.students?.users?.email || ''
     }));
 
     return res.status(200).json({ success: true, enrollments });
@@ -7160,11 +7498,7 @@ export async function getMyExamEnrollments(req: Request, res: Response) {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
-    const { data: student } = await supabaseAdmin
-      .from('students')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: student } = await supabaseAdmin.from('students').select('id').eq('user_id', userId).maybeSingle();
 
     if (!student) return res.status(404).json({ success: false, error: 'Student profile not found.' });
 
@@ -7188,11 +7522,7 @@ export async function cancelEnrollment(req: Request, res: Response) {
 
     const { id } = req.params;
 
-    const { data: student } = await supabaseAdmin
-      .from('students')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: student } = await supabaseAdmin.from('students').select('id').eq('user_id', userId).maybeSingle();
 
     if (!student) return res.status(404).json({ success: false, error: 'Student profile not found.' });
 
@@ -7225,7 +7555,9 @@ export async function generateHallTickets(req: Request, res: Response) {
 
     const result = data?.[0];
     if (result?.success) {
-      return res.status(200).json({ success: true, message: result.message, tickets_generated: result.tickets_generated });
+      return res
+        .status(200)
+        .json({ success: true, message: result.message, tickets_generated: result.tickets_generated });
     } else {
       return res.status(400).json({ success: false, error: result?.message || 'Failed to generate tickets.' });
     }
@@ -7239,11 +7571,7 @@ export async function getMyHallTickets(req: Request, res: Response) {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
-    const { data: student } = await supabaseAdmin
-      .from('students')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const { data: student } = await supabaseAdmin.from('students').select('id').eq('user_id', userId).maybeSingle();
 
     if (!student) return res.status(404).json({ success: false, error: 'Student profile not found.' });
 
@@ -7266,7 +7594,9 @@ export async function getHallTicketDetail(req: Request, res: Response) {
 
     const { data, error } = await supabaseAdmin
       .from('hall_tickets')
-      .select('*, exams(name, start_date, end_date, type), students(roll_number, users(name, email, phone, avatar_url))')
+      .select(
+        '*, exams(name, start_date, end_date, type), students(roll_number, users(name, email, phone, avatar_url))'
+      )
       .eq('id', id)
       .maybeSingle();
 
@@ -7282,8 +7612,8 @@ export async function getHallTicketDetail(req: Request, res: Response) {
         student_email: data.students?.users?.email || '',
         student_phone: data.students?.users?.phone || '',
         student_photo: data.students?.users?.avatar_url || '',
-        exam_name: data.exams?.name || 'Unknown',
-      },
+        exam_name: data.exams?.name || 'Unknown'
+      }
     });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -7296,7 +7626,9 @@ export async function downloadHallTicketPdf(req: Request, res: Response) {
 
     const { data: ticket, error } = await supabaseAdmin
       .from('hall_tickets')
-      .select('*, exams(name, start_date, end_date, type), students(roll_number, users(name, email, phone, avatar_url, institution_id))')
+      .select(
+        '*, exams(name, start_date, end_date, type), students(roll_number, users(name, email, phone, avatar_url, institution_id))'
+      )
       .eq('id', id)
       .maybeSingle();
 
@@ -7383,8 +7715,13 @@ export async function downloadHallTicketPdf(req: Request, res: Response) {
     doc.moveDown(1);
 
     // Footer
-    doc.fontSize(8).font('Helvetica').fillColor('#888888')
-      .text(`Generated on: ${new Date().toLocaleDateString('en-IN')} | This is a system-generated document.`, { align: 'center' });
+    doc
+      .fontSize(8)
+      .font('Helvetica')
+      .fillColor('#888888')
+      .text(`Generated on: ${new Date().toLocaleDateString('en-IN')} | This is a system-generated document.`, {
+        align: 'center'
+      });
 
     doc.end();
   } catch (err: any) {
@@ -7401,8 +7738,12 @@ export async function razorpayWebhook(req: Request, res: Response) {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
 
     if (!secret) {
-      logger.error('[CRITICAL SECURITY ALERT] Razorpay webhook secret is not configured on server (RAZORPAY_WEBHOOK_SECRET missing). Failing closed.');
-      return res.status(503).json({ success: false, error: 'Webhook signature verification secret is not configured on server.' });
+      logger.error(
+        '[CRITICAL SECURITY ALERT] Razorpay webhook secret is not configured on server (RAZORPAY_WEBHOOK_SECRET missing). Failing closed.'
+      );
+      return res
+        .status(503)
+        .json({ success: false, error: 'Webhook signature verification secret is not configured on server.' });
     }
 
     if (!signature) {
@@ -7423,13 +7764,11 @@ export async function razorpayWebhook(req: Request, res: Response) {
 
     const event = req.body.event;
     if (event === 'payment.captured' || event === 'order.paid') {
-      const entity = event === 'payment.captured' 
-        ? req.body.payload.payment.entity 
-        : req.body.payload.order.entity;
+      const entity = event === 'payment.captured' ? req.body.payload.payment.entity : req.body.payload.order.entity;
 
       const notes = entity.notes || {};
       const type = notes.type || (notes.fee_structure_id ? 'fee_payment' : '');
-      const transaction_id = event === 'payment.captured' ? entity.id : (entity.payment_id || entity.id);
+      const transaction_id = event === 'payment.captured' ? entity.id : entity.payment_id || entity.id;
       const amount_paid = entity.amount / 100; // in INR
       const institution_id = notes.institution_id || null;
 
@@ -7477,16 +7816,12 @@ export async function razorpayWebhook(req: Request, res: Response) {
             const pdfBuffer = await generateFeeReceiptPDF(paymentRecord);
             const fileName = `receipts/${transaction_id}.pdf`;
             const receiptUrl = await uploadReportToSupabase(pdfBuffer, fileName);
-            await supabaseAdmin
-              .from('fee_payments')
-              .update({ receipt_url: receiptUrl })
-              .eq('id', paymentRecord.id);
+            await supabaseAdmin.from('fee_payments').update({ receipt_url: receiptUrl }).eq('id', paymentRecord.id);
           } catch (pdfErr) {
             logger.error('Failed generating webhook payment receipt:', pdfErr);
           }
         })();
-      } 
-      else if (type === 'canteen_topup') {
+      } else if (type === 'canteen_topup') {
         const { student_id, amount } = notes;
         if (!student_id) {
           logger.warn('Webhook canteen_topup captured but missing student_id:', notes);
@@ -7534,20 +7869,17 @@ export async function razorpayWebhook(req: Request, res: Response) {
           return res.status(500).json({ success: false, error: 'Database error updating wallet.' });
         }
 
-        await supabaseAdmin
-          .from('wallet_transactions')
-          .insert({
-            institution_id,
-            wallet_id: updatedWallet.id,
-            student_id,
-            type: 'credit',
-            amount: topupAmount,
-            reference_type: 'topup',
-            description: `Wallet top-up (Razorpay ID: ${transaction_id})`,
-            balance_after: newBalance
-          });
-      } 
-      else if (type === 'gym_membership') {
+        await supabaseAdmin.from('wallet_transactions').insert({
+          institution_id,
+          wallet_id: updatedWallet.id,
+          student_id,
+          type: 'credit',
+          amount: topupAmount,
+          reference_type: 'topup',
+          description: `Wallet top-up (Razorpay ID: ${transaction_id})`,
+          balance_after: newBalance
+        });
+      } else if (type === 'gym_membership') {
         const { student_id, plan_id } = notes;
         if (!student_id || !plan_id) {
           logger.warn('Webhook gym_membership captured but missing notes metadata:', notes);
@@ -7588,27 +7920,24 @@ export async function razorpayWebhook(req: Request, res: Response) {
         const endDate = new Date();
         endDate.setMonth(startDate.getMonth() + plan.duration_months);
 
-        const { error: insertErr } = await supabaseAdmin
-          .from('gym_memberships')
-          .insert({
-            institution_id,
-            student_id,
-            plan_id,
-            plan: plan.name,
-            start_date: startDate.toISOString().split('T')[0],
-            end_date: endDate.toISOString().split('T')[0],
-            amount_paid: plan.price,
-            transaction_id,
-            status: 'active',
-            is_frozen: false
-          });
+        const { error: insertErr } = await supabaseAdmin.from('gym_memberships').insert({
+          institution_id,
+          student_id,
+          plan_id,
+          plan: plan.name,
+          start_date: startDate.toISOString().split('T')[0],
+          end_date: endDate.toISOString().split('T')[0],
+          amount_paid: plan.price,
+          transaction_id,
+          status: 'active',
+          is_frozen: false
+        });
 
         if (insertErr) {
           logger.error('Failed to record gym membership from webhook:', insertErr);
           return res.status(500).json({ success: false, error: 'Database error recording membership.' });
         }
-      } 
-      else if (type === 'event_registration') {
+      } else if (type === 'event_registration') {
         const { student_id, event_id, registration_id } = notes;
 
         let regId = registration_id;
@@ -7674,10 +8003,7 @@ export async function cloneFeeStructures(req: Request, res: Response) {
     const { fee_structure_ids, due_date_shift_days, new_due_date, amount_multiplier } = parse.data;
     const instId = req.user?.institution_id;
 
-    let query = supabaseAdmin
-      .from('fee_structures')
-      .select('*')
-      .eq('institution_id', instId);
+    let query = supabaseAdmin.from('fee_structures').select('*').eq('institution_id', instId);
 
     if (fee_structure_ids && fee_structure_ids.length > 0) {
       query = query.in('id', fee_structure_ids);
@@ -7693,7 +8019,7 @@ export async function cloneFeeStructures(req: Request, res: Response) {
       return res.status(404).json({ success: false, error: 'No matching fee structures found to clone.' });
     }
 
-    const clonedInserts = structures.map(sf => {
+    const clonedInserts = structures.map((sf) => {
       let calculatedDueDate = sf.due_date;
       if (new_due_date) {
         calculatedDueDate = new_due_date;
@@ -7707,9 +8033,7 @@ export async function cloneFeeStructures(req: Request, res: Response) {
         calculatedDueDate = d.toISOString().split('T')[0];
       }
 
-      const calculatedAmount = amount_multiplier 
-        ? Number((sf.amount * amount_multiplier).toFixed(2)) 
-        : sf.amount;
+      const calculatedAmount = amount_multiplier ? Number((sf.amount * amount_multiplier).toFixed(2)) : sf.amount;
 
       return {
         institution_id: instId,
@@ -7733,7 +8057,13 @@ export async function cloneFeeStructures(req: Request, res: Response) {
       return res.status(500).json({ success: false, error: 'Failed to save cloned fee structures.' });
     }
 
-    return res.status(201).json({ success: true, message: `Successfully cloned ${clonedData.length} fee structures.`, structures: clonedData });
+    return res
+      .status(201)
+      .json({
+        success: true,
+        message: `Successfully cloned ${clonedData.length} fee structures.`,
+        structures: clonedData
+      });
   } catch (err) {
     logger.error('cloneFeeStructures error:', err);
     return res.status(500).json({ success: false, error: 'Internal server error.' });
@@ -7769,14 +8099,18 @@ export async function processFeeRefund(req: Request, res: Response) {
     }
 
     if (payment.status !== 'Completed') {
-      return res.status(400).json({ success: false, error: `Only completed payments can be refunded. Current status: ${payment.status}` });
+      return res
+        .status(400)
+        .json({ success: false, error: `Only completed payments can be refunded. Current status: ${payment.status}` });
     }
 
     const maxRefund = Number(payment.amount_paid);
     const calculatedRefundAmount = refund_amount ?? maxRefund;
 
     if (calculatedRefundAmount > maxRefund) {
-      return res.status(400).json({ success: false, error: `Refund amount cannot exceed amount paid (₹${maxRefund}).` });
+      return res
+        .status(400)
+        .json({ success: false, error: `Refund amount cannot exceed amount paid (₹${maxRefund}).` });
     }
 
     const transactionId = payment.transaction_id;
@@ -7831,11 +8165,11 @@ export async function uploadStudentPhoto(req: Request, res: Response) {
   try {
     const { id } = req.params; // student_id
     const { photo } = req.body; // base64 string
-    
+
     if (!photo) {
       return res.status(400).json({ success: false, error: 'photo base64 string required.' });
     }
-    
+
     // Retrieve user_id from students table
     const { data: studentCheck, error: checkErr } = await supabaseAdmin
       .from('students')
@@ -7849,31 +8183,30 @@ export async function uploadStudentPhoto(req: Request, res: Response) {
 
     // Authorization: User can update their own student profile photo, or Admin/HOD
     const isSelf = req.user?.role === 'Student' && req.user?.id === studentCheck.user_id;
-    const isAuthorized = req.user?.role === 'Admin' || req.user?.role === 'SuperAdmin' || req.user?.role === 'HOD' || isSelf;
-    
+    const isAuthorized =
+      req.user?.role === 'Admin' || req.user?.role === 'SuperAdmin' || req.user?.role === 'HOD' || isSelf;
+
     if (!isAuthorized) {
       return res.status(403).json({ success: false, error: 'Unauthorized to update this student photo.' });
     }
-    
+
     // Clean base64 string
     const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-    
+
     const path = `photos/${id}/profile.png`;
     const { error: uploadError } = await supabaseAdmin.storage
       .from('student-records')
       .upload(path, buffer, { contentType: 'image/png', upsert: true });
-      
+
     if (uploadError) {
       throw uploadError;
     }
-    
-    const { data: publicUrlData } = supabaseAdmin.storage
-      .from('student-records')
-      .getPublicUrl(path);
-      
+
+    const { data: publicUrlData } = supabaseAdmin.storage.from('student-records').getPublicUrl(path);
+
     const publicUrl = publicUrlData?.publicUrl || '';
-      
+
     // Update students table
     const { data: student, error: studentErr } = await supabaseAdmin
       .from('students')
@@ -7881,17 +8214,14 @@ export async function uploadStudentPhoto(req: Request, res: Response) {
       .eq('id', id)
       .select('id, user_id, photo_url')
       .single();
-      
+
     if (studentErr) throw studentErr;
-    
+
     // Update users table avatar_url
     if (student?.user_id) {
-      await supabaseAdmin
-        .from('users')
-        .update({ avatar_url: publicUrl })
-        .eq('id', student.user_id);
+      await supabaseAdmin.from('users').update({ avatar_url: publicUrl }).eq('id', student.user_id);
     }
-    
+
     return res.status(200).json({ success: true, photo_url: publicUrl });
   } catch (err: any) {
     logger.error('uploadStudentPhoto error:', err);
@@ -7903,40 +8233,36 @@ export async function uploadStudentDocument(req: Request, res: Response) {
   try {
     const { id } = req.params; // student_id
     const { document_name, document_type, file_name, file_data } = req.body;
-    
+
     if (!document_name || !document_type || !file_name || !file_data) {
-      return res.status(400).json({ success: false, error: 'document_name, document_type, file_name, and file_data are required.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'document_name, document_type, file_name, and file_data are required.' });
     }
-    
+
     // Clean base64 file data
     const base64Data = file_data.replace(/^data:.+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
     const fileSizeKb = Math.round(buffer.length / 1024);
-    
+
     const path = `documents/${id}/${document_type}/${Date.now()}_${file_name}`;
     const { error: uploadError } = await supabaseAdmin.storage
       .from('student-records')
       .upload(path, buffer, { contentType: 'application/octet-stream', upsert: true });
-      
+
     if (uploadError) throw uploadError;
-    
-    const { data: publicUrlData } = supabaseAdmin.storage
-      .from('student-records')
-      .getPublicUrl(path);
+
+    const { data: publicUrlData } = supabaseAdmin.storage.from('student-records').getPublicUrl(path);
 
     const publicUrl = publicUrlData?.publicUrl || '';
-      
+
     // Fetch student to verify institution
-    const { data: student } = await supabaseAdmin
-      .from('students')
-      .select('institution_id')
-      .eq('id', id)
-      .single();
-      
+    const { data: student } = await supabaseAdmin.from('students').select('institution_id').eq('id', id).single();
+
     if (!student) {
       return res.status(404).json({ success: false, error: 'Student not found.' });
     }
-    
+
     const { data, error } = await supabaseAdmin
       .from('student_documents')
       .insert({
@@ -7950,7 +8276,7 @@ export async function uploadStudentDocument(req: Request, res: Response) {
       })
       .select()
       .single();
-      
+
     if (error) throw error;
     return res.status(201).json({ success: true, document: data });
   } catch (err: any) {
@@ -7962,7 +8288,7 @@ export async function uploadStudentDocument(req: Request, res: Response) {
 export async function getStudentDocuments(req: Request, res: Response) {
   try {
     const { id } = req.params; // student_id
-    
+
     // Retrieve student info
     const { data: studentCheck, error: checkErr } = await supabaseAdmin
       .from('students')
@@ -7980,13 +8306,13 @@ export async function getStudentDocuments(req: Request, res: Response) {
     if (!isAuthorized) {
       return res.status(403).json({ success: false, error: 'Unauthorized to view these documents.' });
     }
-    
+
     const { data, error } = await supabaseAdmin
       .from('student_documents')
       .select('*, uploaded_by_user:users!student_documents_uploaded_by_fkey(name)')
       .eq('student_id', id)
       .order('uploaded_at', { ascending: false });
-      
+
     if (error) throw error;
     return res.status(200).json({ success: true, documents: data || [] });
   } catch (err: any) {
@@ -7998,7 +8324,7 @@ export async function getStudentDocuments(req: Request, res: Response) {
 export async function deleteStudentDocument(req: Request, res: Response) {
   try {
     const { id, docId } = req.params;
-    
+
     // Fetch document to get file path
     const { data: doc, error: docErr } = await supabaseAdmin
       .from('student_documents')
@@ -8006,25 +8332,20 @@ export async function deleteStudentDocument(req: Request, res: Response) {
       .eq('id', docId)
       .eq('student_id', id)
       .single();
-      
+
     if (docErr || !doc) {
       return res.status(404).json({ success: false, error: 'Document not found.' });
     }
-    
+
     // Extract path from public URL
     const urlParts = doc.file_url.split('/student-records/');
     if (urlParts.length > 1) {
       const storagePath = urlParts[1];
-      await supabaseAdmin.storage
-        .from('student-records')
-        .remove([storagePath]);
+      await supabaseAdmin.storage.from('student-records').remove([storagePath]);
     }
-    
-    const { error: deleteErr } = await supabaseAdmin
-      .from('student_documents')
-      .delete()
-      .eq('id', docId);
-      
+
+    const { error: deleteErr } = await supabaseAdmin.from('student_documents').delete().eq('id', docId);
+
     if (deleteErr) throw deleteErr;
     return res.status(200).json({ success: true, message: 'Document deleted successfully.' });
   } catch (err: any) {
@@ -8041,9 +8362,11 @@ export async function getTimetableVersions(req: Request, res: Response) {
   try {
     const { department_id, semester, batch_year } = req.query;
     if (!department_id || !semester || !batch_year) {
-      return res.status(400).json({ success: false, error: 'department_id, semester, and batch_year are required queries.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'department_id, semester, and batch_year are required queries.' });
     }
-    
+
     const { data, error } = await supabaseAdmin
       .from('timetable_history')
       .select('*, created_by_user:users!timetable_history_created_by_fkey(name)')
@@ -8052,7 +8375,7 @@ export async function getTimetableVersions(req: Request, res: Response) {
       .eq('semester', parseInt(semester as string))
       .eq('batch_year', batch_year)
       .order('version', { ascending: false });
-      
+
     if (error) throw error;
     return res.status(200).json({ success: true, versions: data || [] });
   } catch (err: any) {
@@ -8067,7 +8390,7 @@ export async function saveTimetableVersion(req: Request, res: Response) {
     if (!department_id || !semester || !batch_year) {
       return res.status(400).json({ success: false, error: 'department_id, semester, and batch_year are required.' });
     }
-    
+
     // Fetch active timetable data
     const { data: timetableData, error: ttErr } = await supabaseAdmin
       .from('timetable')
@@ -8076,9 +8399,9 @@ export async function saveTimetableVersion(req: Request, res: Response) {
       .eq('department_id', department_id)
       .eq('semester', semester)
       .eq('batch_year', batch_year);
-      
+
     if (ttErr) throw ttErr;
-    
+
     // Fetch latest version
     const { data: latestVersion } = await supabaseAdmin
       .from('timetable_history')
@@ -8090,9 +8413,9 @@ export async function saveTimetableVersion(req: Request, res: Response) {
       .order('version', { ascending: false })
       .limit(1)
       .maybeSingle();
-      
+
     const nextVersion = (latestVersion?.version || 0) + 1;
-    
+
     const { data, error } = await supabaseAdmin
       .from('timetable_history')
       .insert({
@@ -8106,7 +8429,7 @@ export async function saveTimetableVersion(req: Request, res: Response) {
       })
       .select()
       .single();
-      
+
     if (error) throw error;
     return res.status(201).json({ success: true, version: data });
   } catch (err: any) {
@@ -8119,9 +8442,11 @@ export async function rollbackTimetableVersion(req: Request, res: Response) {
   try {
     const { department_id, semester, batch_year, version } = req.body;
     if (!department_id || !semester || !batch_year || !version) {
-      return res.status(400).json({ success: false, error: 'department_id, semester, batch_year, and version are required.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'department_id, semester, batch_year, and version are required.' });
     }
-    
+
     // Get historical version
     const { data: versionData, error: vErr } = await supabaseAdmin
       .from('timetable_history')
@@ -8132,11 +8457,11 @@ export async function rollbackTimetableVersion(req: Request, res: Response) {
       .eq('batch_year', batch_year)
       .eq('version', version)
       .single();
-      
+
     if (vErr || !versionData) {
       return res.status(404).json({ success: false, error: `Timetable version ${version} not found.` });
     }
-    
+
     // Delete current active timetable slots for this scope
     const { error: delErr } = await supabaseAdmin
       .from('timetable')
@@ -8145,27 +8470,31 @@ export async function rollbackTimetableVersion(req: Request, res: Response) {
       .eq('department_id', department_id)
       .eq('semester', semester)
       .eq('batch_year', batch_year);
-      
+
     if (delErr) throw delErr;
-    
+
     // Restore slots from JSON data
-    const restoreSlots = (versionData.timetable_data as any[] || []).map((slot: any) => {
+    const restoreSlots = ((versionData.timetable_data as any[]) || []).map((slot: any) => {
       const { id, created_at, ...rest } = slot;
       return {
         ...rest,
         institution_id: req.user?.institution_id
       };
     });
-    
+
     if (restoreSlots.length > 0) {
-      const { error: insErr } = await supabaseAdmin
-        .from('timetable')
-        .insert(restoreSlots);
-        
+      const { error: insErr } = await supabaseAdmin.from('timetable').insert(restoreSlots);
+
       if (insErr) throw insErr;
     }
-    
-    return res.status(200).json({ success: true, message: `Timetable successfully rolled back to version ${version}.`, restored_slots: restoreSlots.length });
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: `Timetable successfully rolled back to version ${version}.`,
+        restored_slots: restoreSlots.length
+      });
   } catch (err: any) {
     logger.error('rollbackTimetableVersion error:', err);
     return res.status(500).json({ success: false, error: err.message });
@@ -8179,50 +8508,49 @@ export async function rollbackTimetableVersion(req: Request, res: Response) {
 export async function getExamAnalytics(req: Request, res: Response) {
   try {
     const { id } = req.params; // exam_id
-    
+
     // Fetch all results for this exam
-    const { data: results, error } = await supabaseAdmin
-      .from('exam_results')
-      .select('*')
-      .eq('exam_id', id);
-      
+    const { data: results, error } = await supabaseAdmin.from('exam_results').select('*').eq('exam_id', id);
+
     if (error) throw error;
     if (!results || results.length === 0) {
       return res.status(200).json({ success: true, message: 'No result data found for this exam.', analytics: {} });
     }
-    
+
     // Calculate analytics by subject
     const subjectGroups: { [subject: string]: number[] } = {};
-    results.forEach(resRecord => {
+    results.forEach((resRecord) => {
       const marks = parseFloat(resRecord.marks_obtained as any);
       if (!subjectGroups[resRecord.subject]) subjectGroups[resRecord.subject] = [];
       subjectGroups[resRecord.subject].push(marks);
     });
-    
+
     const subjectAnalytics: any = {};
     let totalExamSum = 0;
     let totalExamCount = 0;
-    
+
     for (const [subject, marksList] of Object.entries(subjectGroups)) {
       const sum = marksList.reduce((acc, val) => acc + val, 0);
       const count = marksList.length;
       const average = parseFloat((sum / count).toFixed(2));
       const min = Math.min(...marksList);
       const max = Math.max(...marksList);
-      
-      const passCount = marksList.filter(m => m >= 40).length; // Pass mark is 40
+
+      const passCount = marksList.filter((m) => m >= 40).length; // Pass mark is 40
       const passRatio = parseFloat(((passCount / count) * 100).toFixed(1));
-      
+
       // Calculate grade distributions for this subject
-      const gradeCounts: any = { 'A+': 0, 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0 };
-      results.filter(r => r.subject === subject).forEach(r => {
-        if (r.grade && gradeCounts[r.grade] !== undefined) {
-          gradeCounts[r.grade]++;
-        } else {
-          gradeCounts['F']++;
-        }
-      });
-      
+      const gradeCounts: any = { 'A+': 0, A: 0, B: 0, C: 0, D: 0, F: 0 };
+      results
+        .filter((r) => r.subject === subject)
+        .forEach((r) => {
+          if (r.grade && gradeCounts[r.grade] !== undefined) {
+            gradeCounts[r.grade]++;
+          } else {
+            gradeCounts['F']++;
+          }
+        });
+
       subjectAnalytics[subject] = {
         average,
         min,
@@ -8231,13 +8559,13 @@ export async function getExamAnalytics(req: Request, res: Response) {
         pass_ratio: passRatio,
         grade_distribution: gradeCounts
       };
-      
+
       totalExamSum += sum;
       totalExamCount += count;
     }
-    
+
     const overallAverage = totalExamCount > 0 ? parseFloat((totalExamSum / totalExamCount).toFixed(2)) : 0;
-    
+
     return res.status(200).json({
       success: true,
       analytics: {
@@ -8256,57 +8584,53 @@ export async function getExamAnalytics(req: Request, res: Response) {
 export async function exportGradeSheetPDF(req: Request, res: Response) {
   try {
     const { studentId, examId } = req.params;
-    
+
     // Fetch student details
     const { data: student, error: stdErr } = await supabaseAdmin
       .from('students')
       .select('*, users(name)')
       .eq('id', studentId)
       .single();
-      
+
     if (stdErr || !student) {
       return res.status(404).json({ success: false, error: 'Student not found.' });
     }
-    
+
     // Fetch exam details
-    const { data: exam, error: exErr } = await supabaseAdmin
-      .from('exams')
-      .select('*')
-      .eq('id', examId)
-      .single();
-      
+    const { data: exam, error: exErr } = await supabaseAdmin.from('exams').select('*').eq('id', examId).single();
+
     if (exErr || !exam) {
       return res.status(404).json({ success: false, error: 'Exam not found.' });
     }
-    
+
     // Fetch student's marks for this exam
     const { data: marks, error: mErr } = await supabaseAdmin
       .from('exam_results')
       .select('*')
       .eq('exam_id', examId)
       .eq('student_id', studentId);
-      
+
     if (mErr || !marks) {
       return res.status(404).json({ success: false, error: 'No exam results found for this student.' });
     }
-    
+
     // Create PDFkit document
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks: Buffer[] = [];
-    
-    doc.on('data', chunk => chunks.push(chunk));
+
+    doc.on('data', (chunk) => chunks.push(chunk));
     doc.on('end', () => {
       const buffer = Buffer.concat(chunks);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename=gradesheet_${student.roll_number}.pdf`);
       return res.status(200).send(buffer);
     });
-    
+
     // Title & Header
     doc.fontSize(22).fillColor('#6C2BD9').text('IRIS 365 UNIVERSITY SYSTEM', { align: 'center' });
     doc.fontSize(14).fillColor('#1F2937').text('OFFICIAL EXAMINATIONS GRADE SHEET', { align: 'center' });
     doc.moveDown();
-    
+
     // Student Info Panel
     doc.fontSize(10).fillColor('#4B5563');
     doc.text(`Student Name: ${(student.users as any)?.name || 'N/A'}`);
@@ -8315,7 +8639,7 @@ export async function exportGradeSheetPDF(req: Request, res: Response) {
     doc.text(`Exam: ${exam.name}`);
     doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`);
     doc.moveDown(2);
-    
+
     // Table Headers
     const startY = doc.y;
     doc.fontSize(11).fillColor('#1F2937').font('Helvetica-Bold');
@@ -8323,45 +8647,49 @@ export async function exportGradeSheetPDF(req: Request, res: Response) {
     doc.text('Marks Obtained', 250, startY);
     doc.text('Max Marks', 350, startY);
     doc.text('Grade', 450, startY);
-    
-    doc.moveTo(50, startY + 15).lineTo(550, startY + 15).strokeColor('#E5E7EB').stroke();
+
+    doc
+      .moveTo(50, startY + 15)
+      .lineTo(550, startY + 15)
+      .strokeColor('#E5E7EB')
+      .stroke();
     doc.moveDown();
-    
+
     let currentY = startY + 25;
     let totalObtained = 0;
     let totalMax = 0;
-    
-    marks.forEach(item => {
+
+    marks.forEach((item) => {
       doc.fontSize(10).fillColor('#4B5563').font('Helvetica');
       doc.text(item.subject, 50, currentY);
       doc.text(item.marks_obtained.toString(), 250, currentY);
       doc.text(item.max_marks.toString(), 350, currentY);
       doc.text(item.grade || 'F', 450, currentY);
-      
+
       totalObtained += parseFloat(item.marks_obtained as any);
       totalMax += parseFloat(item.max_marks as any);
       currentY += 20;
     });
-    
+
     doc.moveTo(50, currentY).lineTo(550, currentY).strokeColor('#1F2937').stroke();
     currentY += 10;
-    
+
     // Total Summary
     doc.fontSize(11).fillColor('#1F2937').font('Helvetica-Bold');
     doc.text('Total Summary:', 50, currentY);
     doc.text(totalObtained.toFixed(1), 250, currentY);
     doc.text(totalMax.toFixed(1), 350, currentY);
-    
+
     const percentage = totalMax > 0 ? (totalObtained / totalMax) * 100 : 0;
     doc.text(`${percentage.toFixed(1)}%`, 450, currentY);
-    
+
     currentY += 40;
-    
+
     // Signatures
     doc.fontSize(10).fillColor('#4B5563').font('Helvetica');
     doc.text('Prepared by: Examination Section', 50, currentY);
     doc.text('Approved by: Controller of Examinations', 350, currentY);
-    
+
     doc.end();
   } catch (err: any) {
     logger.error('exportGradeSheetPDF error:', err);
@@ -8375,17 +8703,17 @@ export async function applySupplementary(req: Request, res: Response) {
     if (!student_id || !exam_id || !subject) {
       return res.status(400).json({ success: false, error: 'student_id, exam_id, and subject are required.' });
     }
-    
+
     const { data: student } = await supabaseAdmin
       .from('students')
       .select('institution_id')
       .eq('id', student_id)
       .single();
-      
+
     if (!student) {
       return res.status(404).json({ success: false, error: 'Student not found.' });
     }
-    
+
     const { data, error } = await supabaseAdmin
       .from('supplementary_exams')
       .insert({
@@ -8398,7 +8726,7 @@ export async function applySupplementary(req: Request, res: Response) {
       })
       .select()
       .single();
-      
+
     if (error) throw error;
     return res.status(201).json({ success: true, application: data });
   } catch (err: any) {
@@ -8410,19 +8738,19 @@ export async function applySupplementary(req: Request, res: Response) {
 export async function getSupplementaryApplications(req: Request, res: Response) {
   try {
     const { student_id, exam_id, status } = req.query;
-    
+
     let query = supabaseAdmin
       .from('supplementary_exams')
       .select('*, students(roll_number, users(name)), exams(name)')
       .eq('institution_id', req.user?.institution_id);
-      
+
     if (student_id) query = query.eq('student_id', student_id);
     if (exam_id) query = query.eq('exam_id', exam_id);
     if (status) query = query.eq('status', status);
-    
+
     const { data, error } = await query.order('applied_at', { ascending: false });
     if (error) throw error;
-    
+
     return res.status(200).json({ success: true, applications: data || [] });
   } catch (err: any) {
     logger.error('getSupplementaryApplications error:', err);
@@ -8434,11 +8762,11 @@ export async function updateSupplementaryStatus(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { status, remarks } = req.body;
-    
+
     if (!status || !['approved', 'rejected', 'completed'].includes(status)) {
       return res.status(400).json({ success: false, error: 'Valid status is required.' });
     }
-    
+
     const { data, error } = await supabaseAdmin
       .from('supplementary_exams')
       .update({ status, remarks })
@@ -8446,7 +8774,7 @@ export async function updateSupplementaryStatus(req: Request, res: Response) {
       .eq('institution_id', req.user?.institution_id)
       .select()
       .single();
-      
+
     if (error) throw error;
     return res.status(200).json({ success: true, application: data });
   } catch (err: any) {
@@ -8459,19 +8787,21 @@ export async function applyReEvaluation(req: Request, res: Response) {
   try {
     const { result_id, student_id, exam_id, subject, reason } = req.body;
     if (!result_id || !student_id || !exam_id || !subject) {
-      return res.status(400).json({ success: false, error: 'result_id, student_id, exam_id, and subject are required.' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'result_id, student_id, exam_id, and subject are required.' });
     }
-    
+
     const { data: result, error: resErr } = await supabaseAdmin
       .from('exam_results')
       .select('marks_obtained, institution_id')
       .eq('id', result_id)
       .single();
-      
+
     if (resErr || !result) {
       return res.status(404).json({ success: false, error: 'Exam result not found.' });
     }
-    
+
     const { data, error } = await supabaseAdmin
       .from('re_evaluation_requests')
       .insert({
@@ -8486,7 +8816,7 @@ export async function applyReEvaluation(req: Request, res: Response) {
       })
       .select()
       .single();
-      
+
     if (error) throw error;
     return res.status(201).json({ success: true, request: data });
   } catch (err: any) {
@@ -8498,19 +8828,19 @@ export async function applyReEvaluation(req: Request, res: Response) {
 export async function getReEvaluationApplications(req: Request, res: Response) {
   try {
     const { student_id, exam_id, status } = req.query;
-    
+
     let query = supabaseAdmin
       .from('re_evaluation_requests')
       .select('*, students(roll_number, users(name)), exams(name)')
       .eq('institution_id', req.user?.institution_id);
-      
+
     if (student_id) query = query.eq('student_id', student_id);
     if (exam_id) query = query.eq('exam_id', exam_id);
     if (status) query = query.eq('status', status);
-    
+
     const { data, error } = await query.order('applied_at', { ascending: false });
     if (error) throw error;
-    
+
     return res.status(200).json({ success: true, applications: data || [] });
   } catch (err: any) {
     logger.error('getReEvaluationApplications error:', err);
@@ -8522,39 +8852,39 @@ export async function updateReEvaluationStatus(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { status, new_marks, remarks } = req.body;
-    
+
     if (!status || !['under_review', 'approved', 'rejected', 'completed'].includes(status)) {
       return res.status(400).json({ success: false, error: 'Valid status is required.' });
     }
-    
+
     const { data: request, error: reqErr } = await supabaseAdmin
       .from('re_evaluation_requests')
       .select('*')
       .eq('id', id)
       .eq('institution_id', req.user?.institution_id)
       .single();
-      
+
     if (reqErr || !request) {
       return res.status(404).json({ success: false, error: 'Re-evaluation request not found.' });
     }
-    
+
     const updateData: any = {
       status,
       remarks,
       resolved_at: new Date().toISOString(),
       resolved_by: req.user?.id
     };
-    
+
     if (status === 'approved' && new_marks !== undefined) {
       updateData.new_marks = new_marks;
-      
+
       const { data: origResult } = await supabaseAdmin
         .from('exam_results')
         .select('max_marks')
         .eq('id', request.result_id)
         .single();
-        
-      const maxMarks = origResult?.max_marks ? parseFloat(origResult.max_marks as any) : 100.00;
+
+      const maxMarks = origResult?.max_marks ? parseFloat(origResult.max_marks as any) : 100.0;
       const pct = (new_marks / maxMarks) * 100;
       let newGrade = 'F';
       if (pct >= 90) newGrade = 'A+';
@@ -8562,7 +8892,7 @@ export async function updateReEvaluationStatus(req: Request, res: Response) {
       else if (pct >= 70) newGrade = 'B';
       else if (pct >= 60) newGrade = 'C';
       else if (pct >= 40) newGrade = 'D';
-      
+
       const { error: updateResultErr } = await supabaseAdmin
         .from('exam_results')
         .update({
@@ -8571,17 +8901,17 @@ export async function updateReEvaluationStatus(req: Request, res: Response) {
           remarks: `Re-evaluated (Previous Marks: ${request.previous_marks})`
         })
         .eq('id', request.result_id);
-        
+
       if (updateResultErr) throw updateResultErr;
     }
-    
+
     const { data: updatedRequest, error: updateReqErr } = await supabaseAdmin
       .from('re_evaluation_requests')
       .update(updateData)
       .eq('id', id)
       .select()
       .single();
-      
+
     if (updateReqErr) throw updateReqErr;
     return res.status(200).json({ success: true, request: updatedRequest });
   } catch (err: any) {
@@ -8609,7 +8939,9 @@ export async function markSchoolDailyRegister(req: Request, res: Response) {
         .maybeSingle();
 
       if (secErr || !section || section.class_teacher_id !== req.user.id) {
-        return res.status(403).json({ success: false, error: 'Only the assigned Class Teacher can mark attendance for this section.' });
+        return res
+          .status(403)
+          .json({ success: false, error: 'Only the assigned Class Teacher can mark attendance for this section.' });
       }
     }
 
@@ -8679,11 +9011,7 @@ export async function getInstitutionSummary(req: Request, res: Response) {
     const institutionId = req.user?.institution_id;
     if (!institutionId) return res.status(401).json({ success: false, error: 'Unauthorized.' });
 
-    const { data: inst } = await supabaseAdmin
-      .from('institutions')
-      .select('type')
-      .eq('id', institutionId)
-      .single();
+    const { data: inst } = await supabaseAdmin.from('institutions').select('type').eq('id', institutionId).single();
 
     const isSchool = inst?.type === 'school';
 
@@ -8702,7 +9030,7 @@ export async function getInstitutionSummary(req: Request, res: Response) {
         .from('class_sections')
         .select('id, grade, section')
         .eq('institution_id', institutionId);
-      
+
       const { data: studentsList } = await supabaseAdmin
         .from('students')
         .select('id, semester')
@@ -8733,7 +9061,7 @@ export async function getInstitutionSummary(req: Request, res: Response) {
       });
 
       const gradeSet = new Set((sections || []).map((s: any) => String(s.grade)));
-      departments = Array.from(gradeSet).map(g => {
+      departments = Array.from(gradeSet).map((g) => {
         const gradeStudents = (studentsList || []).filter((st: any) => String(st.semester) === g);
         let gTotal = 0;
         let gPresent = 0;
@@ -8755,12 +9083,9 @@ export async function getInstitutionSummary(req: Request, res: Response) {
         .from('departments')
         .select('id, name')
         .eq('institution_id', institutionId);
-      departments = (depts || []).map(d => ({ name: d.name, student_count: 0, avg_attendance: 0 }));
+      departments = (depts || []).map((d) => ({ name: d.name, student_count: 0, avg_attendance: 0 }));
 
-      const { data: att } = await supabaseAdmin
-        .from('attendance')
-        .select('status')
-        .eq('institution_id', institutionId);
+      const { data: att } = await supabaseAdmin.from('attendance').select('status').eq('institution_id', institutionId);
       const total = att?.length || 0;
       const present = att?.filter((a: any) => ['present', 'late'].includes(a.status)).length || 0;
       avgAttendancePct = total > 0 ? Math.round((present / total) * 100) : 0;
@@ -8838,7 +9163,7 @@ export async function studentApplyLeave(req: Request, res: Response) {
         reason,
         leave_type: leave_type || 'personal',
         applied_by: 'student',
-        status: 'pending',
+        status: 'pending'
       })
       .select()
       .single();
@@ -8875,11 +9200,7 @@ export async function requestAttendanceCorrection(req: Request, res: Response) {
     let studentId = '';
 
     if (req.user?.role === 'Student') {
-      const { data: student } = await supabaseAdmin
-        .from('students')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const { data: student } = await supabaseAdmin.from('students').select('id').eq('user_id', userId).maybeSingle();
       if (!student) return res.status(404).json({ success: false, error: 'Student profile not found.' });
       studentId = student.id;
     } else if (req.user?.role === 'Parent') {
@@ -8892,7 +9213,9 @@ export async function requestAttendanceCorrection(req: Request, res: Response) {
       if (!link) return res.status(404).json({ success: false, error: 'No linked student found.' });
       studentId = link.student_id;
     } else {
-      return res.status(403).json({ success: false, error: 'Only Students and Parents can submit attendance correction requests.' });
+      return res
+        .status(403)
+        .json({ success: false, error: 'Only Students and Parents can submit attendance correction requests.' });
     }
 
     const { data: correction, error } = await supabaseAdmin
