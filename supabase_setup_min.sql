@@ -11358,3 +11358,56 @@ updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_purchase_intents_created_at ON institution_purchase_intents(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_purchase_intents_status ON institution_purchase_intents(status);
+ALTER TABLE parent_profiles ALTER COLUMN institution_id DROP NOT NULL;
+CREATE TABLE IF NOT EXISTS parent_platform_payments (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+parent_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+amount NUMERIC NOT NULL DEFAULT 150,
+currency TEXT NOT NULL DEFAULT 'INR',
+razorpay_order_id TEXT NOT NULL,
+razorpay_payment_id TEXT UNIQUE,
+status TEXT NOT NULL DEFAULT 'created' CHECK (status IN ('created', 'paid', 'failed')),
+created_at TIMESTAMPTZ DEFAULT NOW(),
+updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_parent_payments_order ON parent_platform_payments(razorpay_order_id);
+CREATE INDEX IF NOT EXISTS idx_parent_payments_user ON parent_platform_payments(parent_user_id);
+CREATE INDEX IF NOT EXISTS idx_parent_payments_status ON parent_platform_payments(status);
+ALTER TABLE parent_platform_payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY parent_read_own_payments ON parent_platform_payments
+FOR SELECT
+USING (auth.uid() = parent_user_id);
+CREATE POLICY service_role_full_access_parent_payments ON parent_platform_payments
+FOR ALL
+USING (true)
+WITH CHECK (true);
+ALTER TABLE parent_platform_payments
+ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS valid_until TIMESTAMPTZ;
+ALTER TABLE parent_platform_payments
+DROP CONSTRAINT IF EXISTS parent_platform_payments_status_check;
+ALTER TABLE parent_platform_payments
+ADD CONSTRAINT parent_platform_payments_status_check
+CHECK (status IN ('created', 'active', 'expired', 'failed', 'paid'));
+UPDATE parent_platform_payments
+SET
+status = 'active',
+paid_at = COALESCE(paid_at, created_at, NOW()),
+valid_until = COALESCE(valid_until, created_at + INTERVAL '1 year', NOW() + INTERVAL '1 year')
+WHERE status = 'paid';
+CREATE OR REPLACE FUNCTION expire_outdated_parent_subscriptions()
+RETURNS INTEGER AS $$
+DECLARE
+updated_count INTEGER;
+BEGIN
+UPDATE parent_platform_payments
+SET
+status = 'expired',
+updated_at = NOW()
+WHERE status IN ('active', 'paid')
+AND valid_until IS NOT NULL
+AND valid_until < NOW();
+GET DIAGNOSTICS updated_count = ROW_COUNT;
+RETURN updated_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

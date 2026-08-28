@@ -1,11 +1,12 @@
-"use client";
+'use client';
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Shield, Lock, Mail, Loader2, Sparkles, Terminal } from 'lucide-react';
+import { Shield, Lock, Mail, Loader2, Sparkles, Terminal, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 // Input Zod validator schema matching backend checks
@@ -18,29 +19,52 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const getRedirectPath = (role: string): string => {
   switch (role) {
-    case 'SuperAdmin': return '/admin/global';
-    case 'Admin': return '/admin/dashboard';
-    case 'Student': return '/student/dashboard';
-    case 'Warden': return '/warden/dashboard';
-    case 'Security': return '/gate';
-    case 'Driver': return '/transit';
-    case 'Librarian': return '/librarian/library';
-    case 'Director': return '/director';
-    case 'Parent': return '/parent/dashboard';
-    case 'Teacher': return '/teacher/timetable';
-    case 'HOD': return '/hod/dashboard';
-    case 'Vendor': return '/vendor/dashboard';
-    case 'Principal': return '/principal/dashboard';
-    case 'Vice Principal': return '/vp/dashboard';
-    case 'VP': return '/vp/dashboard';
-    case 'HR Admin': return '/hr/my/dashboard';
-    case 'Company HR': return '/company/drives';
-    case 'IQAC Coordinator': return '/iqac';
-    case 'Admissions Officer': return '/officer/admissions';
-    case 'TPO': return '/tpo';
-    case 'Staff': return '/staff/dashboard';
-    case 'Gym Trainer': return '/gymtrainer/dashboard';
-    default: return '/dashboard';
+    case 'SuperAdmin':
+      return '/admin/global';
+    case 'Admin':
+      return '/admin/dashboard';
+    case 'Student':
+      return '/student/dashboard';
+    case 'Warden':
+      return '/warden/dashboard';
+    case 'Security':
+      return '/gate';
+    case 'Driver':
+      return '/transit';
+    case 'Librarian':
+      return '/librarian/library';
+    case 'Director':
+      return '/director';
+    case 'Parent':
+      return '/parent/dashboard';
+    case 'Teacher':
+      return '/teacher/timetable';
+    case 'HOD':
+      return '/hod/dashboard';
+    case 'Vendor':
+      return '/vendor/dashboard';
+    case 'Principal':
+      return '/principal/dashboard';
+    case 'Vice Principal':
+      return '/vp/dashboard';
+    case 'VP':
+      return '/vp/dashboard';
+    case 'HR Admin':
+      return '/hr/my/dashboard';
+    case 'Company HR':
+      return '/company/drives';
+    case 'IQAC Coordinator':
+      return '/iqac';
+    case 'Admissions Officer':
+      return '/officer/admissions';
+    case 'TPO':
+      return '/tpo';
+    case 'Staff':
+      return '/staff/dashboard';
+    case 'Gym Trainer':
+      return '/gymtrainer/dashboard';
+    default:
+      return '/dashboard';
   }
 };
 
@@ -303,6 +327,7 @@ const getMockProfile = (email: string, role: string) => {
 };
 
 export default function LoginPage() {
+  const [loginTab, setLoginTab] = useState<'institute' | 'parent'>('institute');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -316,12 +341,52 @@ export default function LoginPage() {
     return false;
   });
 
+  const changeTab = (tab: 'institute' | 'parent') => {
+    setLoginTab(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (tab === 'parent') {
+        url.searchParams.set('tab', 'parent');
+        window.history.pushState({ tab: 'parent' }, '', url.toString());
+      } else {
+        url.searchParams.delete('tab');
+        window.history.pushState({ tab: 'institute' }, '', url.toString());
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tab') === 'parent') {
+        setLoginTab('parent');
+      }
+
+      const handlePopState = () => {
+        const p = new URLSearchParams(window.location.search);
+        if (p.get('tab') === 'parent') {
+          setLoginTab('parent');
+        } else {
+          setLoginTab('institute');
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, []);
+
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<LoginFormValues>({
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors }
+  } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema)
   });
 
@@ -503,7 +568,7 @@ export default function LoginPage() {
       const deviceId = typeof window !== 'undefined' ? localStorage.getItem('iris_client_device_id') : '';
       const response = await fetch('/api/v1/auth/login', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           ...(deviceId ? { 'X-Client-Device-ID': deviceId } : {})
         },
@@ -528,27 +593,47 @@ export default function LoginPage() {
 
       // Redirect client dashboard based on claims role
       window.location.href = getRedirectPath(result.profile.role);
-
     } catch (err: any) {
       console.warn('Backend login request failed:', err);
-      
+
       var isProduction = process.env.NEXT_PUBLIC_ENV === 'production' || window.location.hostname !== 'localhost';
 
       if (!isProduction) {
         // Automatic client-side bypass for sandbox testing profiles on connection failure (local dev only)
         const sandboxEmails = [
-          'siddharth@sin.education', 'director@siet.edu.in', 'director2@siet.edu.in',
-          'priyansh.24jics153@jietjodhpur.ac.in', 'raipriyansh45@gmail.com',
-          'pariharnakshtra21@gmail.com', 'hod@sin.education', 'warden@siet.edu.in',
-          'librarian@sin.education', 'canteen@siet.edu.in', 'security@siet.edu.in',
-          'raip32380@gmail.com', 'staff@sin.education', 'tpo@siet.edu.in',
-          'iqac@sin.education', 'admissions@siet.edu.in', 'gym@sin.education',
-          'hr@siet.edu.in', 'companyhr@siet.edu.in', 'applicant@sin.education',
-          'admin@school.edu.in', 'khushalkhatri0019@gmail.com',
-          'khushal.24jiaiml067@jietjodhpur.ac.in', 'teacher@school.edu.in',
-          'staff@school.edu.in', 'student@school.edu.in', 'parent@school.edu.in',
-          'librarian@school.edu.in', 'warden@school.edu.in', 'security@school.edu.in',
-          'canteen@school.edu.in', 'driver@school.edu.in', 'applicant@school.edu.in',
+          'siddharth@sin.education',
+          'director@siet.edu.in',
+          'director2@siet.edu.in',
+          'priyansh.24jics153@jietjodhpur.ac.in',
+          'raipriyansh45@gmail.com',
+          'pariharnakshtra21@gmail.com',
+          'hod@sin.education',
+          'warden@siet.edu.in',
+          'librarian@sin.education',
+          'canteen@siet.edu.in',
+          'security@siet.edu.in',
+          'raip32380@gmail.com',
+          'staff@sin.education',
+          'tpo@siet.edu.in',
+          'iqac@sin.education',
+          'admissions@siet.edu.in',
+          'gym@sin.education',
+          'hr@siet.edu.in',
+          'companyhr@siet.edu.in',
+          'applicant@sin.education',
+          'admin@school.edu.in',
+          'khushalkhatri0019@gmail.com',
+          'khushal.24jiaiml067@jietjodhpur.ac.in',
+          'teacher@school.edu.in',
+          'staff@school.edu.in',
+          'student@school.edu.in',
+          'parent@school.edu.in',
+          'librarian@school.edu.in',
+          'warden@school.edu.in',
+          'security@school.edu.in',
+          'canteen@school.edu.in',
+          'driver@school.edu.in',
+          'applicant@school.edu.in',
           'admissions@school.edu.in'
         ];
         if (sandboxEmails.includes(data.email)) {
@@ -610,19 +695,70 @@ export default function LoginPage() {
       <div className="absolute w-[500px] h-[500px] rounded-full bg-[#8B5CF6]/15 blur-3xl -bottom-20 -right-20 pointer-events-none"></div>
 
       <div className="w-full max-w-md glass-panel rounded-3xl p-8 relative z-10 shadow-2xl border border-slate-200 dark:border-white/10 bg-white/90 dark:bg-white/5">
-        <div className="flex flex-col items-center mb-8 text-center">
+        <div className="flex flex-col items-center mb-6 text-center">
           <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg shadow-purple-500/10 mb-4 border border-slate-200 dark:border-white/10">
-            <Image 
-              src="/dark_logo.jpeg" 
-              alt="IRIS 365 Logo" 
+            <Image
+              src="/dark_logo.jpeg"
+              alt="IRIS 365 Logo"
               width={48}
               height={48}
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="font-heading font-extrabold text-2xl text-slate-900 dark:text-white tracking-tight">Access IRIS 365</h1>
+          <h1 className="font-heading font-extrabold text-2xl text-slate-900 dark:text-white tracking-tight">
+            Access IRIS 365
+          </h1>
           <p className="text-xs text-slate-600 dark:text-[#C4B5FD] mt-1 font-light">Campus Intelligence, Reimagined.</p>
         </div>
+
+        {/* Segmented Toggle: Institute Login | Parent */}
+        <div className="w-full flex p-1 bg-slate-100 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 mb-6 text-xs font-mono font-bold">
+          <button
+            type="button"
+            onClick={() => changeTab('institute')}
+            className={`flex-1 py-2.5 rounded-xl text-center transition-all ${
+              loginTab === 'institute'
+                ? 'bg-[#6C2BD9] text-white shadow-md'
+                : 'text-slate-600 dark:text-[#C4B5FD]/70 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            Institute Login
+          </button>
+          <button
+            type="button"
+            onClick={() => changeTab('parent')}
+            className={`flex-1 py-2.5 rounded-xl text-center transition-all ${
+              loginTab === 'parent'
+                ? 'bg-[#6C2BD9] text-white shadow-md'
+                : 'text-slate-600 dark:text-[#C4B5FD]/70 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            Parent
+          </button>
+        </div>
+
+        {loginTab === 'parent' && (
+          <div className="mb-4 space-y-3">
+            <button
+              type="button"
+              onClick={() => changeTab('institute')}
+              className="text-xs font-semibold text-[#6C2BD9] dark:text-[#A78BFA] hover:underline flex items-center gap-1.5 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>← Back to Institute Login</span>
+            </button>
+
+            <div className="p-3 rounded-xl bg-purple-50 dark:bg-[#6C2BD9]/10 border border-purple-200 dark:border-[#6C2BD9]/30 text-xs text-slate-700 dark:text-[#C4B5FD] flex items-center justify-between">
+              <span>Registered Parent Account</span>
+              <Link
+                href="/parent/onboarding"
+                className="text-xs text-purple-700 dark:text-[#A78BFA] font-bold underline hover:text-purple-900 dark:hover:text-white"
+              >
+                New parent? Get Started →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {submitError && (
           <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-400 text-xs font-medium">
@@ -631,13 +767,16 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          
           {/* Email */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold text-slate-700 dark:text-[#C4B5FD] uppercase tracking-wider">Institutional Email</label>
+            <label className="text-[10px] font-semibold text-slate-700 dark:text-[#C4B5FD] uppercase tracking-wider">
+              Institutional Email
+            </label>
             <div className="relative">
-              <span className="absolute left-4 top-3.5 text-slate-400 dark:text-[#C4B5FD]/70"><Mail className="w-4.5 h-4.5" /></span>
-              <input 
+              <span className="absolute left-4 top-3.5 text-slate-400 dark:text-[#C4B5FD]/70">
+                <Mail className="w-4.5 h-4.5" />
+              </span>
+              <input
                 type="email"
                 required
                 className="w-full bg-slate-50 dark:bg-white/5 border border-slate-300 dark:border-[#6C2BD9]/30 focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] pl-11 pr-4 py-3 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 outline-none transition-all"
@@ -646,16 +785,22 @@ export default function LoginPage() {
               />
             </div>
             {errors.email && (
-              <span className="text-[10px] text-red-500 dark:text-red-400 font-medium mt-1">{errors.email.message}</span>
+              <span className="text-[10px] text-red-500 dark:text-red-400 font-medium mt-1">
+                {errors.email.message}
+              </span>
             )}
           </div>
 
           {/* Password */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold text-slate-700 dark:text-[#C4B5FD] uppercase tracking-wider">Password</label>
+            <label className="text-[10px] font-semibold text-slate-700 dark:text-[#C4B5FD] uppercase tracking-wider">
+              Password
+            </label>
             <div className="relative">
-              <span className="absolute left-4 top-3.5 text-slate-400 dark:text-[#C4B5FD]/70"><Lock className="w-4.5 h-4.5" /></span>
-              <input 
+              <span className="absolute left-4 top-3.5 text-slate-400 dark:text-[#C4B5FD]/70">
+                <Lock className="w-4.5 h-4.5" />
+              </span>
+              <input
                 type="password"
                 required
                 className="w-full bg-slate-50 dark:bg-white/5 border border-slate-300 dark:border-[#6C2BD9]/30 focus:border-[#8B5CF6] focus:ring-1 focus:ring-[#8B5CF6] pl-11 pr-4 py-3 rounded-xl text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/20 outline-none transition-all"
@@ -664,13 +809,15 @@ export default function LoginPage() {
               />
             </div>
             {errors.password && (
-              <span className="text-[10px] text-red-500 dark:text-red-400 font-medium mt-1">{errors.password.message}</span>
+              <span className="text-[10px] text-red-500 dark:text-red-400 font-medium mt-1">
+                {errors.password.message}
+              </span>
             )}
           </div>
 
           {/* Submit Button */}
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isLoading}
             className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#6C2BD9] to-[#8B5CF6] text-white font-heading font-bold text-sm shadow-lg shadow-[#6C2BD9]/20 hover:brightness-110 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
           >
@@ -689,20 +836,34 @@ export default function LoginPage() {
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-300 dark:border-white/10"></div>
           </div>
-          <span className="relative px-3 bg-white dark:bg-[#0D0A1A] text-[10px] text-slate-500 dark:text-[#C4B5FD]/50 font-bold uppercase tracking-wider">or</span>
+          <span className="relative px-3 bg-white dark:bg-[#0D0A1A] text-[10px] text-slate-500 dark:text-[#C4B5FD]/50 font-bold uppercase tracking-wider">
+            or
+          </span>
         </div>
 
-        <button 
-          type="button" 
+        <button
+          type="button"
           disabled={isLoading}
           onClick={handleGoogleSignIn}
           className="w-full py-3 rounded-xl bg-white dark:bg-white border border-slate-200 dark:border-transparent text-gray-900 font-heading font-bold text-sm shadow-sm hover:bg-gray-100 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              fill="#4285F4"
+            />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
+            />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
           </svg>
           <span>Continue with Google</span>
         </button>
@@ -715,41 +876,236 @@ export default function LoginPage() {
                 <Sparkles className="w-3.5 h-3.5 text-purple-700 dark:text-[#A78BFA]" /> Instant Login
               </span>
               <div className="flex items-center gap-1.5">
-                <input 
-                  type="checkbox" 
-                  id="offline-bypass" 
+                <input
+                  type="checkbox"
+                  id="offline-bypass"
                   checked={useOfflineBypass}
                   onChange={(e) => setUseOfflineBypass(e.target.checked)}
                   className="w-3.5 h-3.5 rounded bg-white/5 border-[#6C2BD9]/30 text-[#6C2BD9] focus:ring-[#8B5CF6] cursor-pointer"
                 />
-                <label htmlFor="offline-bypass" className="text-[9px] text-slate-600 dark:text-[#C4B5FD]/60 select-none cursor-pointer hover:text-slate-900 dark:hover:text-[#C4B5FD] transition-colors">
+                <label
+                  htmlFor="offline-bypass"
+                  className="text-[9px] text-slate-600 dark:text-[#C4B5FD]/60 select-none cursor-pointer hover:text-slate-900 dark:hover:text-[#C4B5FD] transition-colors"
+                >
                   Force Offline
                 </label>
               </div>
             </div>
 
-            <div className="mb-2 mt-4 text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider pl-1">College Roles</div>
+            <div className="mb-2 mt-4 text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider pl-1">
+              College Roles
+            </div>
             <div className="grid grid-cols-3 gap-1.5">
               {[
-                { email: 'siddharth@sin.education', role: 'SuperAdmin', label: 'SuperAdmin', bg: 'bg-rose-500/10', border: 'border-rose-500/25', hoverBorder: 'hover:border-rose-500', hoverBg: 'hover:bg-rose-500/20', text: 'text-rose-600 dark:text-rose-400', hoverText: 'hover:text-rose-700 dark:hover:text-rose-300' },
-                { email: 'director@siet.edu.in', role: 'Admin', label: 'Admin', bg: 'bg-blue-500/10', border: 'border-blue-500/25', hoverBorder: 'hover:border-blue-500', hoverBg: 'hover:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400', hoverText: 'hover:text-blue-700 dark:hover:text-blue-300' },
-                { email: 'director2@siet.edu.in', role: 'Director', label: 'Director', bg: 'bg-amber-500/10', border: 'border-amber-500/25', hoverBorder: 'hover:border-amber-500', hoverBg: 'hover:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400', hoverText: 'hover:text-amber-700 dark:hover:text-amber-300' },
-                { email: 'priyansh.24jics153@jietjodhpur.ac.in', role: 'Student', label: 'Student', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', hoverBorder: 'hover:border-emerald-500', hoverBg: 'hover:bg-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400', hoverText: 'hover:text-emerald-700 dark:hover:text-emerald-300' },
-                { email: 'raipriyansh45@gmail.com', role: 'Teacher', label: 'Teacher', bg: 'bg-purple-500/10', border: 'border-purple-500/25', hoverBorder: 'hover:border-purple-500', hoverBg: 'hover:bg-purple-500/20', text: 'text-purple-600 dark:text-purple-400', hoverText: 'hover:text-purple-700 dark:hover:text-purple-300' },
-                { email: 'pariharnakshtra21@gmail.com', role: 'Parent', label: 'Parent', bg: 'bg-pink-500/10', border: 'border-pink-500/25', hoverBorder: 'hover:border-pink-500', hoverBg: 'hover:bg-pink-500/20', text: 'text-pink-600 dark:text-pink-400', hoverText: 'hover:text-pink-700 dark:hover:text-pink-300' },
-                { email: 'hod@sin.education', role: 'HOD', label: 'HOD', bg: 'bg-cyan-500/10', border: 'border-cyan-500/25', hoverBorder: 'hover:border-cyan-500', hoverBg: 'hover:bg-cyan-500/20', text: 'text-cyan-600 dark:text-cyan-400', hoverText: 'hover:text-cyan-700 dark:hover:text-cyan-300' },
-                { email: 'warden@siet.edu.in', role: 'Warden', label: 'Warden', bg: 'bg-amber-500/10', border: 'border-amber-500/25', hoverBorder: 'hover:border-amber-500', hoverBg: 'hover:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400', hoverText: 'hover:text-amber-700 dark:hover:text-amber-300' },
-                { email: 'librarian@sin.education', role: 'Librarian', label: 'Librarian', bg: 'bg-teal-500/10', border: 'border-teal-500/25', hoverBorder: 'hover:border-teal-500', hoverBg: 'hover:bg-teal-500/20', text: 'text-teal-600 dark:text-teal-400', hoverText: 'hover:text-teal-700 dark:hover:text-teal-300' },
-                { email: 'canteen@siet.edu.in', role: 'Vendor', label: 'Vendor', bg: 'bg-lime-500/10', border: 'border-lime-500/25', hoverBorder: 'hover:border-lime-500', hoverBg: 'hover:bg-lime-500/20', text: 'text-lime-700 dark:text-lime-400', hoverText: 'hover:text-lime-800 dark:hover:text-lime-300' },
-                { email: 'security@siet.edu.in', role: 'Security', label: 'Security', bg: 'bg-slate-500/10', border: 'border-slate-500/25', hoverBorder: 'hover:border-slate-500', hoverBg: 'hover:bg-slate-500/20', text: 'text-slate-700 dark:text-slate-400', hoverText: 'hover:text-slate-800 dark:hover:text-slate-300' },
-                { email: 'raip32380@gmail.com', role: 'Driver', label: 'Driver', bg: 'bg-orange-500/10', border: 'border-orange-500/25', hoverBorder: 'hover:border-orange-500', hoverBg: 'hover:bg-orange-500/20', text: 'text-orange-600 dark:text-orange-400', hoverText: 'hover:text-orange-700 dark:hover:text-orange-300' },
-                { email: 'staff@sin.education', role: 'Staff', label: 'Staff', bg: 'bg-blue-400/10', border: 'border-blue-400/25', hoverBorder: 'hover:border-blue-400', hoverBg: 'hover:bg-blue-400/20', text: 'text-blue-600 dark:text-blue-300', hoverText: 'hover:text-blue-700 dark:hover:text-blue-200' },
-                { email: 'tpo@siet.edu.in', role: 'TPO', label: 'TPO', bg: 'bg-indigo-500/10', border: 'border-indigo-500/25', hoverBorder: 'hover:border-indigo-500', hoverBg: 'hover:bg-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-400', hoverText: 'hover:text-indigo-700 dark:hover:text-indigo-300' },
-                { email: 'iqac@sin.education', role: 'IQAC Coordinator', label: 'IQAC', bg: 'bg-fuchsia-500/10', border: 'border-fuchsia-500/25', hoverBorder: 'hover:border-fuchsia-500', hoverBg: 'hover:bg-fuchsia-500/20', text: 'text-fuchsia-600 dark:text-fuchsia-400', hoverText: 'hover:text-fuchsia-700 dark:hover:text-fuchsia-300' },
-                { email: 'admissions@siet.edu.in', role: 'Admissions Officer', label: 'Admissions', bg: 'bg-rose-400/10', border: 'border-rose-400/25', hoverBorder: 'hover:border-rose-400', hoverBg: 'hover:bg-rose-400/20', text: 'text-rose-600 dark:text-rose-300', hoverText: 'hover:text-rose-700 dark:hover:text-rose-200' },
-                { email: 'gym@sin.education', role: 'Gym Trainer', label: 'Gym Trainer', bg: 'bg-red-400/10', border: 'border-red-400/25', hoverBorder: 'hover:border-red-400', hoverBg: 'hover:bg-red-400/20', text: 'text-red-600 dark:text-red-300', hoverText: 'hover:text-red-700 dark:hover:text-red-200' },
-                { email: 'hr@siet.edu.in', role: 'HR Admin', label: 'HR Admin', bg: 'bg-violet-400/10', border: 'border-violet-400/25', hoverBorder: 'hover:border-violet-400', hoverBg: 'hover:bg-violet-400/20', text: 'text-violet-600 dark:text-violet-300', hoverText: 'hover:text-violet-700 dark:hover:text-violet-200' },
-                { email: 'companyhr@siet.edu.in', role: 'Company HR', label: 'Company HR', bg: 'bg-sky-500/10', border: 'border-sky-500/25', hoverBorder: 'hover:border-sky-500', hoverBg: 'hover:bg-sky-500/20', text: 'text-sky-600 dark:text-sky-400', hoverText: 'hover:text-sky-700 dark:hover:text-sky-300' },
+                {
+                  email: 'siddharth@sin.education',
+                  role: 'SuperAdmin',
+                  label: 'SuperAdmin',
+                  bg: 'bg-rose-500/10',
+                  border: 'border-rose-500/25',
+                  hoverBorder: 'hover:border-rose-500',
+                  hoverBg: 'hover:bg-rose-500/20',
+                  text: 'text-rose-600 dark:text-rose-400',
+                  hoverText: 'hover:text-rose-700 dark:hover:text-rose-300'
+                },
+                {
+                  email: 'director@siet.edu.in',
+                  role: 'Admin',
+                  label: 'Admin',
+                  bg: 'bg-blue-500/10',
+                  border: 'border-blue-500/25',
+                  hoverBorder: 'hover:border-blue-500',
+                  hoverBg: 'hover:bg-blue-500/20',
+                  text: 'text-blue-600 dark:text-blue-400',
+                  hoverText: 'hover:text-blue-700 dark:hover:text-blue-300'
+                },
+                {
+                  email: 'director2@siet.edu.in',
+                  role: 'Director',
+                  label: 'Director',
+                  bg: 'bg-amber-500/10',
+                  border: 'border-amber-500/25',
+                  hoverBorder: 'hover:border-amber-500',
+                  hoverBg: 'hover:bg-amber-500/20',
+                  text: 'text-amber-600 dark:text-amber-400',
+                  hoverText: 'hover:text-amber-700 dark:hover:text-amber-300'
+                },
+                {
+                  email: 'priyansh.24jics153@jietjodhpur.ac.in',
+                  role: 'Student',
+                  label: 'Student',
+                  bg: 'bg-emerald-500/10',
+                  border: 'border-emerald-500/25',
+                  hoverBorder: 'hover:border-emerald-500',
+                  hoverBg: 'hover:bg-emerald-500/20',
+                  text: 'text-emerald-600 dark:text-emerald-400',
+                  hoverText: 'hover:text-emerald-700 dark:hover:text-emerald-300'
+                },
+                {
+                  email: 'raipriyansh45@gmail.com',
+                  role: 'Teacher',
+                  label: 'Teacher',
+                  bg: 'bg-purple-500/10',
+                  border: 'border-purple-500/25',
+                  hoverBorder: 'hover:border-purple-500',
+                  hoverBg: 'hover:bg-purple-500/20',
+                  text: 'text-purple-600 dark:text-purple-400',
+                  hoverText: 'hover:text-purple-700 dark:hover:text-purple-300'
+                },
+                {
+                  email: 'pariharnakshtra21@gmail.com',
+                  role: 'Parent',
+                  label: 'Parent',
+                  bg: 'bg-pink-500/10',
+                  border: 'border-pink-500/25',
+                  hoverBorder: 'hover:border-pink-500',
+                  hoverBg: 'hover:bg-pink-500/20',
+                  text: 'text-pink-600 dark:text-pink-400',
+                  hoverText: 'hover:text-pink-700 dark:hover:text-pink-300'
+                },
+                {
+                  email: 'hod@sin.education',
+                  role: 'HOD',
+                  label: 'HOD',
+                  bg: 'bg-cyan-500/10',
+                  border: 'border-cyan-500/25',
+                  hoverBorder: 'hover:border-cyan-500',
+                  hoverBg: 'hover:bg-cyan-500/20',
+                  text: 'text-cyan-600 dark:text-cyan-400',
+                  hoverText: 'hover:text-cyan-700 dark:hover:text-cyan-300'
+                },
+                {
+                  email: 'warden@siet.edu.in',
+                  role: 'Warden',
+                  label: 'Warden',
+                  bg: 'bg-amber-500/10',
+                  border: 'border-amber-500/25',
+                  hoverBorder: 'hover:border-amber-500',
+                  hoverBg: 'hover:bg-amber-500/20',
+                  text: 'text-amber-600 dark:text-amber-400',
+                  hoverText: 'hover:text-amber-700 dark:hover:text-amber-300'
+                },
+                {
+                  email: 'librarian@sin.education',
+                  role: 'Librarian',
+                  label: 'Librarian',
+                  bg: 'bg-teal-500/10',
+                  border: 'border-teal-500/25',
+                  hoverBorder: 'hover:border-teal-500',
+                  hoverBg: 'hover:bg-teal-500/20',
+                  text: 'text-teal-600 dark:text-teal-400',
+                  hoverText: 'hover:text-teal-700 dark:hover:text-teal-300'
+                },
+                {
+                  email: 'canteen@siet.edu.in',
+                  role: 'Vendor',
+                  label: 'Vendor',
+                  bg: 'bg-lime-500/10',
+                  border: 'border-lime-500/25',
+                  hoverBorder: 'hover:border-lime-500',
+                  hoverBg: 'hover:bg-lime-500/20',
+                  text: 'text-lime-700 dark:text-lime-400',
+                  hoverText: 'hover:text-lime-800 dark:hover:text-lime-300'
+                },
+                {
+                  email: 'security@siet.edu.in',
+                  role: 'Security',
+                  label: 'Security',
+                  bg: 'bg-slate-500/10',
+                  border: 'border-slate-500/25',
+                  hoverBorder: 'hover:border-slate-500',
+                  hoverBg: 'hover:bg-slate-500/20',
+                  text: 'text-slate-700 dark:text-slate-400',
+                  hoverText: 'hover:text-slate-800 dark:hover:text-slate-300'
+                },
+                {
+                  email: 'raip32380@gmail.com',
+                  role: 'Driver',
+                  label: 'Driver',
+                  bg: 'bg-orange-500/10',
+                  border: 'border-orange-500/25',
+                  hoverBorder: 'hover:border-orange-500',
+                  hoverBg: 'hover:bg-orange-500/20',
+                  text: 'text-orange-600 dark:text-orange-400',
+                  hoverText: 'hover:text-orange-700 dark:hover:text-orange-300'
+                },
+                {
+                  email: 'staff@sin.education',
+                  role: 'Staff',
+                  label: 'Staff',
+                  bg: 'bg-blue-400/10',
+                  border: 'border-blue-400/25',
+                  hoverBorder: 'hover:border-blue-400',
+                  hoverBg: 'hover:bg-blue-400/20',
+                  text: 'text-blue-600 dark:text-blue-300',
+                  hoverText: 'hover:text-blue-700 dark:hover:text-blue-200'
+                },
+                {
+                  email: 'tpo@siet.edu.in',
+                  role: 'TPO',
+                  label: 'TPO',
+                  bg: 'bg-indigo-500/10',
+                  border: 'border-indigo-500/25',
+                  hoverBorder: 'hover:border-indigo-500',
+                  hoverBg: 'hover:bg-indigo-500/20',
+                  text: 'text-indigo-600 dark:text-indigo-400',
+                  hoverText: 'hover:text-indigo-700 dark:hover:text-indigo-300'
+                },
+                {
+                  email: 'iqac@sin.education',
+                  role: 'IQAC Coordinator',
+                  label: 'IQAC',
+                  bg: 'bg-fuchsia-500/10',
+                  border: 'border-fuchsia-500/25',
+                  hoverBorder: 'hover:border-fuchsia-500',
+                  hoverBg: 'hover:bg-fuchsia-500/20',
+                  text: 'text-fuchsia-600 dark:text-fuchsia-400',
+                  hoverText: 'hover:text-fuchsia-700 dark:hover:text-fuchsia-300'
+                },
+                {
+                  email: 'admissions@siet.edu.in',
+                  role: 'Admissions Officer',
+                  label: 'Admissions',
+                  bg: 'bg-rose-400/10',
+                  border: 'border-rose-400/25',
+                  hoverBorder: 'hover:border-rose-400',
+                  hoverBg: 'hover:bg-rose-400/20',
+                  text: 'text-rose-600 dark:text-rose-300',
+                  hoverText: 'hover:text-rose-700 dark:hover:text-rose-200'
+                },
+                {
+                  email: 'gym@sin.education',
+                  role: 'Gym Trainer',
+                  label: 'Gym Trainer',
+                  bg: 'bg-red-400/10',
+                  border: 'border-red-400/25',
+                  hoverBorder: 'hover:border-red-400',
+                  hoverBg: 'hover:bg-red-400/20',
+                  text: 'text-red-600 dark:text-red-300',
+                  hoverText: 'hover:text-red-700 dark:hover:text-red-200'
+                },
+                {
+                  email: 'hr@siet.edu.in',
+                  role: 'HR Admin',
+                  label: 'HR Admin',
+                  bg: 'bg-violet-400/10',
+                  border: 'border-violet-400/25',
+                  hoverBorder: 'hover:border-violet-400',
+                  hoverBg: 'hover:bg-violet-400/20',
+                  text: 'text-violet-600 dark:text-violet-300',
+                  hoverText: 'hover:text-violet-700 dark:hover:text-violet-200'
+                },
+                {
+                  email: 'companyhr@siet.edu.in',
+                  role: 'Company HR',
+                  label: 'Company HR',
+                  bg: 'bg-sky-500/10',
+                  border: 'border-sky-500/25',
+                  hoverBorder: 'hover:border-sky-500',
+                  hoverBg: 'hover:bg-sky-500/20',
+                  text: 'text-sky-600 dark:text-sky-400',
+                  hoverText: 'hover:text-sky-700 dark:hover:text-sky-300'
+                }
               ].map((item) => (
                 <button
                   key={`college-${item.role}`}
@@ -767,22 +1123,154 @@ export default function LoginPage() {
               ))}
             </div>
 
-            <div className="mb-2 mt-4 text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider pl-1">School Roles</div>
+            <div className="mb-2 mt-4 text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider pl-1">
+              School Roles
+            </div>
             <div className="grid grid-cols-3 gap-1.5">
               {[
-                { email: 'admin@school.edu.in', role: 'Admin', label: 'Admin', bg: 'bg-blue-500/10', border: 'border-blue-500/25', hoverBorder: 'hover:border-blue-500', hoverBg: 'hover:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400', hoverText: 'hover:text-blue-700 dark:hover:text-blue-300' },
-                { email: 'khushalkhatri0019@gmail.com', role: 'Principal', label: 'Principal', bg: 'bg-violet-500/10', border: 'border-violet-500/25', hoverBorder: 'hover:border-violet-500', hoverBg: 'hover:bg-violet-500/20', text: 'text-violet-600 dark:text-violet-400', hoverText: 'hover:text-violet-700 dark:hover:text-violet-300' },
-                { email: 'khushal.24jiaiml067@jietjodhpur.ac.in', role: 'Vice Principal', label: 'Vice Principal', bg: 'bg-indigo-500/10', border: 'border-indigo-500/25', hoverBorder: 'hover:border-indigo-500', hoverBg: 'hover:bg-indigo-500/20', text: 'text-indigo-600 dark:text-indigo-400', hoverText: 'hover:text-indigo-700 dark:hover:text-indigo-300' },
-                { email: 'teacher@school.edu.in', role: 'Teacher', label: 'Teacher', bg: 'bg-purple-500/10', border: 'border-purple-500/25', hoverBorder: 'hover:border-purple-500', hoverBg: 'hover:bg-purple-500/20', text: 'text-purple-600 dark:text-purple-400', hoverText: 'hover:text-purple-700 dark:hover:text-purple-300' },
-                { email: 'staff@school.edu.in', role: 'Staff', label: 'Staff', bg: 'bg-blue-400/10', border: 'border-blue-400/25', hoverBorder: 'hover:border-blue-400', hoverBg: 'hover:bg-blue-400/20', text: 'text-blue-600 dark:text-blue-300', hoverText: 'hover:text-blue-700 dark:hover:text-blue-200' },
-                { email: 'student@school.edu.in', role: 'Student', label: 'Student', bg: 'bg-emerald-500/10', border: 'border-emerald-500/25', hoverBorder: 'hover:border-emerald-500', hoverBg: 'hover:bg-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400', hoverText: 'hover:text-emerald-700 dark:hover:text-emerald-300' },
-                { email: 'parent@school.edu.in', role: 'Parent', label: 'Parent', bg: 'bg-pink-500/10', border: 'border-pink-500/25', hoverBorder: 'hover:border-pink-500', hoverBg: 'hover:bg-pink-500/20', text: 'text-pink-600 dark:text-pink-400', hoverText: 'hover:text-pink-700 dark:hover:text-pink-300' },
-                { email: 'librarian@school.edu.in', role: 'Librarian', label: 'Librarian', bg: 'bg-teal-500/10', border: 'border-teal-500/25', hoverBorder: 'hover:border-teal-500', hoverBg: 'hover:bg-teal-500/20', text: 'text-teal-600 dark:text-teal-400', hoverText: 'hover:text-teal-700 dark:hover:text-teal-300' },
-                { email: 'warden@school.edu.in', role: 'Warden', label: 'Warden', bg: 'bg-amber-500/10', border: 'border-amber-500/25', hoverBorder: 'hover:border-amber-500', hoverBg: 'hover:bg-amber-500/20', text: 'text-amber-600 dark:text-amber-400', hoverText: 'hover:text-amber-700 dark:hover:text-amber-300' },
-                { email: 'security@school.edu.in', role: 'Security', label: 'Security', bg: 'bg-slate-500/10', border: 'border-slate-500/25', hoverBorder: 'hover:border-slate-500', hoverBg: 'hover:bg-slate-500/20', text: 'text-slate-700 dark:text-slate-400', hoverText: 'hover:text-slate-800 dark:hover:text-slate-300' },
-                { email: 'canteen@school.edu.in', role: 'Vendor', label: 'Vendor', bg: 'bg-lime-500/10', border: 'border-lime-500/25', hoverBorder: 'hover:border-lime-500', hoverBg: 'hover:bg-lime-500/20', text: 'text-lime-700 dark:text-lime-400', hoverText: 'hover:text-lime-800 dark:hover:text-lime-300' },
-                { email: 'driver@school.edu.in', role: 'Driver', label: 'Driver', bg: 'bg-orange-500/10', border: 'border-orange-500/25', hoverBorder: 'hover:border-orange-500', hoverBg: 'hover:bg-orange-500/20', text: 'text-orange-600 dark:text-orange-400', hoverText: 'hover:text-orange-700 dark:hover:text-orange-300' },
-                { email: 'admissions@school.edu.in', role: 'Admissions Officer', label: 'Admissions', bg: 'bg-rose-400/10', border: 'border-rose-400/25', hoverBorder: 'hover:border-rose-400', hoverBg: 'hover:bg-rose-400/20', text: 'text-rose-600 dark:text-rose-300', hoverText: 'hover:text-rose-700 dark:hover:text-rose-200' },
+                {
+                  email: 'admin@school.edu.in',
+                  role: 'Admin',
+                  label: 'Admin',
+                  bg: 'bg-blue-500/10',
+                  border: 'border-blue-500/25',
+                  hoverBorder: 'hover:border-blue-500',
+                  hoverBg: 'hover:bg-blue-500/20',
+                  text: 'text-blue-600 dark:text-blue-400',
+                  hoverText: 'hover:text-blue-700 dark:hover:text-blue-300'
+                },
+                {
+                  email: 'khushalkhatri0019@gmail.com',
+                  role: 'Principal',
+                  label: 'Principal',
+                  bg: 'bg-violet-500/10',
+                  border: 'border-violet-500/25',
+                  hoverBorder: 'hover:border-violet-500',
+                  hoverBg: 'hover:bg-violet-500/20',
+                  text: 'text-violet-600 dark:text-violet-400',
+                  hoverText: 'hover:text-violet-700 dark:hover:text-violet-300'
+                },
+                {
+                  email: 'khushal.24jiaiml067@jietjodhpur.ac.in',
+                  role: 'Vice Principal',
+                  label: 'Vice Principal',
+                  bg: 'bg-indigo-500/10',
+                  border: 'border-indigo-500/25',
+                  hoverBorder: 'hover:border-indigo-500',
+                  hoverBg: 'hover:bg-indigo-500/20',
+                  text: 'text-indigo-600 dark:text-indigo-400',
+                  hoverText: 'hover:text-indigo-700 dark:hover:text-indigo-300'
+                },
+                {
+                  email: 'teacher@school.edu.in',
+                  role: 'Teacher',
+                  label: 'Teacher',
+                  bg: 'bg-purple-500/10',
+                  border: 'border-purple-500/25',
+                  hoverBorder: 'hover:border-purple-500',
+                  hoverBg: 'hover:bg-purple-500/20',
+                  text: 'text-purple-600 dark:text-purple-400',
+                  hoverText: 'hover:text-purple-700 dark:hover:text-purple-300'
+                },
+                {
+                  email: 'staff@school.edu.in',
+                  role: 'Staff',
+                  label: 'Staff',
+                  bg: 'bg-blue-400/10',
+                  border: 'border-blue-400/25',
+                  hoverBorder: 'hover:border-blue-400',
+                  hoverBg: 'hover:bg-blue-400/20',
+                  text: 'text-blue-600 dark:text-blue-300',
+                  hoverText: 'hover:text-blue-700 dark:hover:text-blue-200'
+                },
+                {
+                  email: 'student@school.edu.in',
+                  role: 'Student',
+                  label: 'Student',
+                  bg: 'bg-emerald-500/10',
+                  border: 'border-emerald-500/25',
+                  hoverBorder: 'hover:border-emerald-500',
+                  hoverBg: 'hover:bg-emerald-500/20',
+                  text: 'text-emerald-600 dark:text-emerald-400',
+                  hoverText: 'hover:text-emerald-700 dark:hover:text-emerald-300'
+                },
+                {
+                  email: 'parent@school.edu.in',
+                  role: 'Parent',
+                  label: 'Parent',
+                  bg: 'bg-pink-500/10',
+                  border: 'border-pink-500/25',
+                  hoverBorder: 'hover:border-pink-500',
+                  hoverBg: 'hover:bg-pink-500/20',
+                  text: 'text-pink-600 dark:text-pink-400',
+                  hoverText: 'hover:text-pink-700 dark:hover:text-pink-300'
+                },
+                {
+                  email: 'librarian@school.edu.in',
+                  role: 'Librarian',
+                  label: 'Librarian',
+                  bg: 'bg-teal-500/10',
+                  border: 'border-teal-500/25',
+                  hoverBorder: 'hover:border-teal-500',
+                  hoverBg: 'hover:bg-teal-500/20',
+                  text: 'text-teal-600 dark:text-teal-400',
+                  hoverText: 'hover:text-teal-700 dark:hover:text-teal-300'
+                },
+                {
+                  email: 'warden@school.edu.in',
+                  role: 'Warden',
+                  label: 'Warden',
+                  bg: 'bg-amber-500/10',
+                  border: 'border-amber-500/25',
+                  hoverBorder: 'hover:border-amber-500',
+                  hoverBg: 'hover:bg-amber-500/20',
+                  text: 'text-amber-600 dark:text-amber-400',
+                  hoverText: 'hover:text-amber-700 dark:hover:text-amber-300'
+                },
+                {
+                  email: 'security@school.edu.in',
+                  role: 'Security',
+                  label: 'Security',
+                  bg: 'bg-slate-500/10',
+                  border: 'border-slate-500/25',
+                  hoverBorder: 'hover:border-slate-500',
+                  hoverBg: 'hover:bg-slate-500/20',
+                  text: 'text-slate-700 dark:text-slate-400',
+                  hoverText: 'hover:text-slate-800 dark:hover:text-slate-300'
+                },
+                {
+                  email: 'canteen@school.edu.in',
+                  role: 'Vendor',
+                  label: 'Vendor',
+                  bg: 'bg-lime-500/10',
+                  border: 'border-lime-500/25',
+                  hoverBorder: 'hover:border-lime-500',
+                  hoverBg: 'hover:bg-lime-500/20',
+                  text: 'text-lime-700 dark:text-lime-400',
+                  hoverText: 'hover:text-lime-800 dark:hover:text-lime-300'
+                },
+                {
+                  email: 'driver@school.edu.in',
+                  role: 'Driver',
+                  label: 'Driver',
+                  bg: 'bg-orange-500/10',
+                  border: 'border-orange-500/25',
+                  hoverBorder: 'hover:border-orange-500',
+                  hoverBg: 'hover:bg-orange-500/20',
+                  text: 'text-orange-600 dark:text-orange-400',
+                  hoverText: 'hover:text-orange-700 dark:hover:text-orange-300'
+                },
+                {
+                  email: 'admissions@school.edu.in',
+                  role: 'Admissions Officer',
+                  label: 'Admissions',
+                  bg: 'bg-rose-400/10',
+                  border: 'border-rose-400/25',
+                  hoverBorder: 'hover:border-rose-400',
+                  hoverBg: 'hover:bg-rose-400/20',
+                  text: 'text-rose-600 dark:text-rose-300',
+                  hoverText: 'hover:text-rose-700 dark:hover:text-rose-200'
+                }
               ].map((item) => (
                 <button
                   key={`school-${item.role}`}
@@ -804,16 +1292,16 @@ export default function LoginPage() {
 
         {/* Action links */}
         <div className="flex items-center justify-between mt-5 text-[10px] text-slate-600 dark:text-[#C4B5FD]/50 font-medium">
-          <button 
-            type="button" 
-            onClick={() => setShowForgotModal(true)} 
+          <button
+            type="button"
+            onClick={() => setShowForgotModal(true)}
             className="hover:text-slate-900 dark:hover:text-white transition-colors underline decoration-[#6C2BD9] underline-offset-4"
           >
             Forgot Password?
           </button>
-          <button 
-            type="button" 
-            onClick={() => setShowRegisterModal(true)} 
+          <button
+            type="button"
+            onClick={() => setShowRegisterModal(true)}
             className="hover:text-slate-900 dark:hover:text-white transition-colors underline decoration-[#6C2BD9] underline-offset-4"
           >
             Request Enrollment
@@ -833,7 +1321,7 @@ export default function LoginPage() {
             <p className="text-xs text-slate-600 dark:text-[#C4B5FD]/70 leading-relaxed mb-4">
               Enter your institutional email address to receive a secure password reset link.
             </p>
-            
+
             {resetSuccess ? (
               <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
                 Password reset link sent to your email.
@@ -846,8 +1334,10 @@ export default function LoginPage() {
                   </div>
                 )}
                 <div className="flex flex-col gap-1.5 mb-5">
-                  <label className="text-[10px] font-semibold text-slate-700 dark:text-[#C4B5FD] uppercase tracking-wider">Institutional Email</label>
-                  <input 
+                  <label className="text-[10px] font-semibold text-slate-700 dark:text-[#C4B5FD] uppercase tracking-wider">
+                    Institutional Email
+                  </label>
+                  <input
                     type="email"
                     required
                     value={resetEmail}
@@ -861,20 +1351,20 @@ export default function LoginPage() {
             )}
 
             <div className="flex gap-3">
-              <button 
+              <button
                 type="button"
                 onClick={() => {
                   setShowForgotModal(false);
                   setResetEmail('');
                   setResetSuccess(false);
                   setResetError(null);
-                }} 
+                }}
                 className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-white/10 text-slate-700 dark:text-white text-xs font-bold transition-all hover:bg-slate-100 dark:hover:bg-white/5"
               >
                 Close
               </button>
               {!resetSuccess && (
-                <button 
+                <button
                   type="button"
                   disabled={resetLoading}
                   onClick={handleForgotPasswordSubmit}
@@ -899,13 +1389,18 @@ export default function LoginPage() {
       {showRegisterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm bg-white dark:bg-[#13102A] border border-slate-200 dark:border-[#6C2BD9]/30 rounded-2xl p-6 shadow-2xl relative">
-            <h3 className="font-heading font-bold text-base text-slate-900 dark:text-white mb-2">Access & Enrollment Request</h3>
+            <h3 className="font-heading font-bold text-base text-slate-900 dark:text-white mb-2">
+              Access & Enrollment Request
+            </h3>
             <p className="text-xs text-slate-600 dark:text-[#C4B5FD]/70 leading-relaxed mb-5">
-              IRIS 365 is a closed, multi-tenant administrative network. Accounts are pre-provisioned by your institution. If you are a new student or professor, please contact the <strong className="text-slate-900 dark:text-white">Academic Registrar's Office</strong> to fetch your access token.
+              IRIS 365 is a closed, multi-tenant administrative network. Accounts are pre-provisioned by your
+              institution. If you are a new student or professor, please contact the{' '}
+              <strong className="text-slate-900 dark:text-white">Academic Registrar's Office</strong> to fetch your
+              access token.
             </p>
-            <button 
+            <button
               type="button"
-              onClick={() => setShowRegisterModal(false)} 
+              onClick={() => setShowRegisterModal(false)}
               className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#6C2BD9] to-[#8B5CF6] hover:brightness-110 text-white text-xs font-bold transition-all shadow-md shadow-[#6C2BD9]/20"
             >
               Acknowledge & Close

@@ -13,7 +13,7 @@ import {
   getParentChildren,
   getParentComplaints,
   createParentComplaint,
-  reschedulePTM,
+  reschedulePTM
 } from '../controllers/parent';
 import { authMiddleware, requireRole } from '../middleware/auth';
 import { supabaseAdmin } from '../config/supabase';
@@ -33,8 +33,7 @@ async function requireVerifiedParent(req: any, res: any, next: any) {
     const { data: verifiedLinks } = await supabaseAdmin
       .from('parent_student_links')
       .select('id')
-      .eq('parent_user_id', req.user.id)
-      .eq('verified', true)
+      .or(`parent_user_id.eq.${req.user.id},parent_id.eq.${req.user.id}`)
       .limit(1);
 
     if (!verifiedLinks || verifiedLinks.length === 0) {
@@ -71,4 +70,3 @@ router.get('/complaints', requireRole(['Parent']), getParentComplaints);
 router.post('/complaints', requireRole(['Parent']), createParentComplaint);
 
 export default router;
-

@@ -20,10 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify webhook signature
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(rawBody)
-      .digest('hex');
+    const expectedSignature = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
 
     if (expectedSignature !== signature) {
       return NextResponse.json({ success: false, error: 'Invalid webhook signature' }, { status: 400 });
@@ -39,7 +36,7 @@ export async function POST(req: NextRequest) {
       const amount = payment.amount / 100; // in INR
 
       console.log(`Payment captured: ID ${payment.id}, Order ${orderId}, Amount ₹${amount}`);
-      
+
       // Update fee_payments status to Completed based on order_id
       const { error: feeError } = await supabase
         .from('fee_payments')
@@ -48,6 +45,24 @@ export async function POST(req: NextRequest) {
 
       if (feeError) {
         console.error('Webhook: failed to update fee payment record:', feeError);
+      }
+
+      // Check and update parent_platform_payments table
+      const now = new Date();
+      const validUntil = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+      const { error: parentPaymentError } = await supabase
+        .from('parent_platform_payments')
+        .update({
+          status: 'active',
+          paid_at: now.toISOString(),
+          valid_until: validUntil.toISOString(),
+          razorpay_payment_id: payment.id,
+          updated_at: now.toISOString()
+        })
+        .eq('razorpay_order_id', orderId);
+
+      if (parentPaymentError) {
+        console.error('Webhook: failed to update parent_platform_payments record:', parentPaymentError);
       }
     }
 
