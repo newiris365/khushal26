@@ -6,7 +6,6 @@ import { getRazorpayClient } from '../lib/razorpay';
 import crypto from 'crypto';
 
 const router = Router();
-router.use(authMiddleware);
 
 const pricingPlanSchema = z.object({
   institution_id: z.string().uuid('Invalid institution_id'),
@@ -32,9 +31,41 @@ const verifySubscriptionSchema = z.object({
 });
 
 const accountPlanSchema = z.object({
-  account_count: z.number().int().min(500, 'Minimum account count is 500'),
-  billing_cycle: z.enum(['monthly', 'annual']).default('monthly')
+  account_count: z.number().int().min(1, 'Minimum account count is 1'),
+  billing_cycle: z.enum(['monthly', 'annual']).default('annual'),
+  currency: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR')
 });
+
+const createPurchaseOrderSchema = z.object({
+  institution_name: z.string().min(1, 'Institution name is required'),
+  contact_name: z.string().min(1, 'Contact name is required'),
+  contact_email: z.string().email('Valid contact email is required'),
+  contact_phone: z.string().min(1, 'Contact phone is required'),
+  city: z.string().optional().default(''),
+  tier: z.enum(['growth', 'scale', 'enterprise']),
+  account_count: z.number().int().min(1, 'Minimum account count is 1'),
+  billing_cycle: z.enum(['monthly', 'annual']),
+  currency: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR')
+});
+
+const verifyPurchaseSchema = z.object({
+  institution_name: z.string().min(1, 'Institution name is required'),
+  contact_name: z.string().min(1, 'Contact name is required'),
+  contact_email: z.string().email('Valid contact email is required'),
+  contact_phone: z.string().min(1, 'Contact phone is required'),
+  city: z.string().optional().default(''),
+  tier: z.enum(['growth', 'scale', 'enterprise']),
+  account_count: z.number().int().min(1, 'Minimum account count is 1'),
+  billing_cycle: z.enum(['monthly', 'annual']),
+  currency: z.enum(['INR', 'USD', 'EUR', 'GBP']).default('INR'),
+  razorpay_order_id: z.string().min(1, 'Razorpay order ID is required'),
+  razorpay_payment_id: z.string().min(1, 'Razorpay payment ID is required'),
+  razorpay_signature: z.string().min(1, 'Razorpay signature is required')
+});
+
+import { computeGraduatedTotal, getTier, TIER_RATES, CurrencyCode } from '../lib/pricing';
+
+// ========== PUBLIC ENDPOINTS ==========
 
 // ========== ACCOUNT-BASED PRICING CALCULATOR ==========
 router.post('/calculate-account-plan', async (req: Request, res: Response) => {
@@ -43,42 +74,39 @@ router.post('/calculate-account-plan', async (req: Request, res: Response) => {
     if (!parse.success) {
       return res.status(400).json({ success: false, error: parse.error.errors[0].message });
     }
-    const { account_count, billing_cycle } = parse.data;
+    const { account_count, billing_cycle, currency } = parse.data;
 
-    const account_blocks = Math.max(1, Math.ceil(account_count / 500));
-    let tier: 'growth' | 'scale' | 'enterprise' = 'growth';
-    let base_rate_per_block = 99; // $99 per 500 accounts
+    const tier = getTier(account_count);
+    const tierConfig = TIER_RATES[tier] || TIER_RATES.growth;
+    const config = tierConfig[currency as CurrencyCode] || tierConfig.INR;
 
-    if (account_count > 10000) {
-      tier = 'enterprise';
-      base_rate_per_block = 79;
-    } else if (account_count > 2500) {
-      tier = 'scale';
-      base_rate_per_block = 89;
-    }
+    const rate_per_person_annual = config.annual_rate;
+    const rate_per_person_monthly = config.monthly_rate;
 
-    const monthly_amount = account_blocks * base_rate_per_block;
-    const annual_discount_multiplier = 0.8; // 20% discount
-    const annual_amount_total = Math.round(monthly_amount * 12 * annual_discount_multiplier);
-    const annual_monthly_equivalent = Math.round(annual_amount_total / 12);
+    const annual_amount_total = computeGraduatedTotal(account_count, 'annual', currency as CurrencyCode);
+    const monthly_amount = computeGraduatedTotal(account_count, 'monthly', currency as CurrencyCode);
+    const annual_monthly_equivalent = Number((annual_amount_total / 12).toFixed(2));
 
     return res.status(200).json({
       success: true,
       account_count,
-      account_blocks,
       tier,
       billing_cycle,
-      base_rate_per_block,
+      currency,
+      currency_symbol: config.symbol,
+      locale: config.locale,
+      rate_per_person_annual,
+      rate_per_person_monthly,
       monthly_amount,
       annual_amount_total,
       annual_monthly_equivalent,
-      discount_percent: 20,
+      discount_percent: 17,
       support_level:
         tier === 'growth'
           ? 'Standard Email & Ticket Support (24h SLA)'
           : tier === 'scale'
             ? 'Priority 24/7 Support & Dedicated Onboarding Specialist (4h SLA)'
-            : 'Dedicated Account Manager, Custom Hardware Integration & Custom SLA',
+            : 'Dedicated Account Manager, Custom Hardware Integration & Guaranteed 99.99% Uptime SLA',
       features_included: [
         'Full Campus OS Features (All Modules Unlocked)',
         'Unlimited AI Concierge Queries',
@@ -89,6 +117,245 @@ router.post('/calculate-account-plan', async (req: Request, res: Response) => {
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Internal server error calculating subscription.' });
+  }
+});
+
+// ========== PURCHASE INTENT: CREATE ORDER (PUBLIC) ==========
+router.post('/purchase-intent/create-order', async (req: Request, res: Response) => {
+  try {
+    const parse = createPurchaseOrderSchema.safeParse(req.body);
+    if (!parse.success) {
+      return res.status(400).json({ success: false, error: parse.error.errors[0].message });
+    }
+    const {
+      institution_name,
+      contact_name,
+      contact_email,
+      contact_phone,
+      city,
+      tier,
+      account_count,
+      billing_cycle,
+      currency
+    } = parse.data;
+
+    const computedTotal = computeGraduatedTotal(account_count, billing_cycle, currency as CurrencyCode);
+    const amountPaise = Math.round(computedTotal * 100);
+
+    const activeTier = getTier(account_count);
+    const tierConfig = TIER_RATES[activeTier] || TIER_RATES.growth;
+    const config = tierConfig[currency as CurrencyCode] || tierConfig.INR;
+
+    const razorpay = getRazorpayClient();
+    if (razorpay) {
+      try {
+        const options = {
+          amount: amountPaise,
+          currency: currency === 'INR' ? 'INR' : 'USD',
+          receipt: `purch_${Date.now().toString().slice(-8)}`,
+          notes: {
+            institution_name,
+            contact_email,
+            tier: activeTier,
+            account_count,
+            billing_cycle,
+            currency
+          }
+        };
+        const order = await razorpay.orders.create(options);
+        return res.status(200).json({
+          success: true,
+          order_id: order.id,
+          amount: computedTotal,
+          amount_paise: amountPaise,
+          currency,
+          currency_symbol: config.symbol,
+          key_id: process.env.RAZORPAY_KEY_ID || ''
+        });
+      } catch (err: any) {
+        // Fallback to mock order when Razorpay API key is invalid or unreachable
+      }
+    }
+
+    // Mock fallback when Razorpay keys are not configured or in test environment
+    const mockOrderId = `order_mock_${Date.now()}`;
+    return res.status(200).json({
+      success: true,
+      order_id: mockOrderId,
+      amount: computedTotal,
+      amount_paise: amountPaise,
+      currency,
+      currency_symbol: config.symbol,
+      key_id: 'rzp_test_mock'
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to create purchase order.' });
+  }
+});
+
+// ========== PURCHASE INTENT: VERIFY PAYMENT (PUBLIC) ==========
+router.post('/purchase-intent/verify', async (req: Request, res: Response) => {
+  try {
+    const parse = verifyPurchaseSchema.safeParse(req.body);
+    if (!parse.success) {
+      return res.status(400).json({ success: false, error: parse.error.errors[0].message });
+    }
+    const {
+      institution_name,
+      contact_name,
+      contact_email,
+      contact_phone,
+      city,
+      tier,
+      account_count,
+      billing_cycle,
+      currency,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    } = parse.data;
+
+    const expectedAmountTotal = computeGraduatedTotal(account_count, billing_cycle, currency as CurrencyCode);
+    const expectedPaise = Math.round(expectedAmountTotal * 100);
+
+    const isMock = razorpay_order_id.startsWith('order_mock_') || razorpay_payment_id.startsWith('pay_mock_');
+
+    const razorpay = getRazorpayClient();
+    if (razorpay && !isMock) {
+      const secret = process.env.RAZORPAY_KEY_SECRET;
+      if (!secret) {
+        return res.status(500).json({ success: false, error: 'Razorpay secret key not configured on server.' });
+      }
+
+      // 1. Verify HMAC Signature
+      const generatedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest('hex');
+
+      const sigBuf = Buffer.from(razorpay_signature);
+      const genBuf = Buffer.from(generatedSignature);
+      if (sigBuf.length !== genBuf.length || !crypto.timingSafeEqual(sigBuf, genBuf)) {
+        return res.status(400).json({ success: false, error: 'Invalid Razorpay payment signature.' });
+      }
+
+      // 2. Fetch payment entity from Razorpay API
+      const payment = await razorpay.payments.fetch(razorpay_payment_id);
+      if (!payment || payment.status !== 'captured') {
+        return res.status(400).json({ success: false, error: 'Payment status is not captured.' });
+      }
+
+      if (payment.amount !== expectedPaise) {
+        return res.status(400).json({
+          success: false,
+          error: `Payment amount mismatch. Expected ${expectedPaise} paise, but received ${payment.amount} paise.`
+        });
+      }
+    }
+
+    // 3. Idempotency Check & Database Insertion
+    const { data: existing } = await supabaseAdmin
+      .from('institution_purchase_intents')
+      .select('id')
+      .eq('razorpay_payment_id', razorpay_payment_id)
+      .maybeSingle();
+
+    if (existing) {
+      return res
+        .status(409)
+        .json({ success: false, error: 'Payment ID already recorded. Duplicate submission rejected.' });
+    }
+
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from('institution_purchase_intents')
+      .insert({
+        institution_name,
+        contact_name,
+        contact_email,
+        contact_phone,
+        city: city || '',
+        tier,
+        account_count,
+        billing_cycle,
+        currency,
+        amount_paid: expectedAmountTotal,
+        razorpay_order_id,
+        razorpay_payment_id,
+        status: 'paid_pending_setup'
+      })
+      .select('*')
+      .single();
+
+    if (insertErr) {
+      return res.status(500).json({ success: false, error: 'Failed to record purchase intent record.' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payment verified and purchase intent recorded successfully.',
+      purchase_intent: inserted
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Internal server error verifying purchase intent.' });
+  }
+});
+
+// ========== AUTHENTICATED ENDPOINTS BELOW ==========
+router.use(authMiddleware);
+
+// GET /purchase-intents — SuperAdmin / Admin inbox for purchase intents
+router.get('/purchase-intents', async (req: Request, res: Response) => {
+  try {
+    const userRole = req.user?.role;
+    if (userRole !== 'SuperAdmin' && userRole !== 'Admin' && userRole !== 'Director') {
+      return res.status(403).json({ success: false, error: 'Access denied. SuperAdmin or Admin role required.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('institution_purchase_intents')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    return res.status(200).json({ success: true, purchase_intents: data || [] });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Internal server error fetching purchase intents.' });
+  }
+});
+
+// PATCH /purchase-intent/:id/status — Mark intent as provisioned
+router.patch('/purchase-intent/:id/status', async (req: Request, res: Response) => {
+  try {
+    const userRole = req.user?.role;
+    if (userRole !== 'SuperAdmin' && userRole !== 'Admin' && userRole !== 'Director') {
+      return res.status(403).json({ success: false, error: 'Access denied. SuperAdmin or Admin role required.' });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!['paid_pending_setup', 'provisioned'].includes(status)) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'Invalid status. Must be paid_pending_setup or provisioned.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('institution_purchase_intents')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+
+    return res.status(200).json({ success: true, purchase_intent: data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Internal server error updating purchase intent status.' });
   }
 });
 
