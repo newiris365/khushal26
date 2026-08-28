@@ -19,7 +19,14 @@ import {
   Loader2
 } from 'lucide-react';
 
-import { CurrencyCode, TierRateConfig, TIER_RATES, getTier, computeGraduatedTotal } from '../../lib/pricing';
+import {
+  CurrencyCode,
+  TierRateConfig,
+  TIER_RATES,
+  getTier,
+  computeGraduatedTotal,
+  getGraduatedBreakdown
+} from '../../lib/pricing';
 
 const roundToStep = (n: number) => Math.max(500, Math.round(n / 100) * 100);
 
@@ -55,7 +62,8 @@ function BuyNowForm() {
 
   const currentRateConfig = getRateConfig(activeTier, currency);
   const rate = billingCycle === 'annual' ? currentRateConfig.annual_rate : currentRateConfig.monthly_rate;
-  const totalAmount = computeGraduatedTotal(accountCount, billingCycle, currency);
+  const breakdownData = getGraduatedBreakdown(accountCount, billingCycle, currency);
+  const totalAmount = breakdownData.total;
 
   const formatPrice = (amount: number) => {
     return `${currentRateConfig.symbol}${amount.toLocaleString(currentRateConfig.locale, {

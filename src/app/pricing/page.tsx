@@ -12,7 +12,8 @@ import {
   TIER_RATES,
   CURRENCIES,
   getTier,
-  computeGraduatedTotal
+  computeGraduatedTotal,
+  getGraduatedBreakdown
 } from '../../lib/pricing';
 
 const SLIDER_MIN = 500;
